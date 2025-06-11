@@ -107,7 +107,7 @@ int main(int argc, char *argv[]){
 
     // clink::frozenlake::FrozenLake::TestPod();
 
-    clink::mlp::MLP::TestModel();
+    clink::mlp::MLP::Test();
 
 
     // clink::mlp::MLP::Test();

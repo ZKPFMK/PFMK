@@ -1108,7 +1108,7 @@ bool MLP::TestModel() {
     bool success = ModelVerify(seed, proof, input, para_com_pub);;
 
     std::cout << "success:" << success << "\n";
-    return 1;
+    return success;
 }
 
 bool MLP::Test(){
