@@ -1129,8 +1129,12 @@ bool MLP::Test(){
     MatrixCommitmentSec para_com_sec(n+1); // rnd
     ComputeMatrixCom(para_com_pub, para_com_sec, para);
 
+    Message msg;
+
     auto seed = misc::RandH256();
     ModelProof model_proof;
+{
+    Tick tick("prover time");
     ModelProve(seed, model_proof, input, para, para_com_pub, para_com_sec);
 
     //密钥承诺
@@ -1177,13 +1181,12 @@ bool MLP::Test(){
                 sub_key, r_enc_sub_key, enc_sub_key);
 
     //构造传输的消息
-    Message msg;
     msg.enc_sub_key = std::move(enc_sub_key);
     msg.com_k = std::move(com_k); //在实际场景中应该使用model proof中的密钥承诺
     msg.com_bits = std::move(com_bits);
     msg.model_proof = std::move(model_proof);
     msg.key_proof = std::move(key_proof);
-
+}
     //验证者只能使用msg中的消息进行验证
 
 #ifndef DISABLE_SERIALIZE_CHECK
@@ -1204,7 +1207,10 @@ bool MLP::Test(){
     }
 #endif
     //input 以及参数承诺已知
-    bool success = ModelVerify(seed, msg.model_proof, input, para_com_pub);
+    bool success = false;
+{   
+    Tick tick("verifier time");
+    success = ModelVerify(seed, msg.model_proof, input, para_com_pub);
     success = success && KeyVerify(seed, msg.key_proof, msg.com_k, msg.com_bits, msg.enc_sub_key);
     assert(success);
 
@@ -1223,6 +1229,7 @@ bool MLP::Test(){
         }
         // misc::PrintVector(data[i]);
     }
+}
     std::cout << "success:" << success << "\n";
     return success;
 }
