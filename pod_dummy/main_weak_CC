@@ -1,0 +1,839 @@
+#include <assert.h>
+
+#include <iostream>
+
+#include <cstdlib>
+
+#include "ecc/ecc.h"
+#include "utils/schnorr.h"
+#include "public.h"
+
+
+#include "ecc/funcs.h"
+
+#include <math.h>
+#include <chrono>
+
+#define VMRSS_LINE 17
+
+using namespace std;
+using namespace schnorr;
+
+G1 g;
+
+long long get_time()
+{
+    auto timepoint = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(timepoint.time_since_epoch()).count();
+}
+
+long long laststart = 0;
+long long lastend = 0;
+void timer_start(){
+    laststart = get_time();
+}
+
+void timer_end(string msg){
+    lastend = get_time();
+    cout << msg << " duration:" << (lastend - laststart) / 1000000.0 << endl;
+}
+
+
+int get_memory_by_pid(pid_t pid) {
+	char file_name[64]={0};
+	FILE *fd;
+	char line_buff[512]={0};
+	sprintf(file_name,"/proc/%d/status",pid);
+	
+	fd =fopen(file_name,"r");
+	if(nullptr == fd){
+		return 0;
+	}
+	
+	char name[64];
+	int vmrss;
+	for (int i=0; i<VMRSS_LINE-1;i++){
+		fgets(line_buff,sizeof(line_buff),fd);
+	}
+	
+	fgets(line_buff,sizeof(line_buff),fd);
+    std::cout << line_buff;
+	sscanf(line_buff,"%s %d",name,&vmrss);
+	fclose(fd);
+
+	return vmrss;
+}
+
+template<typename T>
+void print(vector<T> const& v){
+    for(int i=0; i<v.size(); i++){
+        cout << v[i] << "   ";
+    }
+    cout << endl << "---------------------" << endl;
+};
+
+template<typename T>
+void print(vector<vector<T>> const& v){
+    for(int i=0; i<v.size(); i++){
+        for(int j=0; j<v[i].size();j++){
+            cout << v[i][j] << "   ";
+        }
+        cout << endl;
+    }
+    cout << "---------------------" << endl;
+};
+
+
+template<typename T>
+void print(T const& v){
+    cout << v << endl;
+};
+
+template<typename T>
+bool vector_eq(vector<T> const& a, vector<T> const& b){
+    bool ret = true;
+    for(int i=0; i<a.size(); i++){
+        ret = (ret && (a[i] == b[i]));
+        if(ret == false) return false;
+    }
+    return true;
+}
+
+
+inline void encrypt(G1 const& pk, Fr const& m, Fr const& r, G1 & ret1, G1 & ret2) {
+    ret1 =  g * r;
+    ret2 = (pk * r) + g * m;
+}
+
+inline void encrypt(Fr const& x, vector<vector<int>> const& open_positions, vector<G1> const& solCipher, vector<vector<int>> const& s, vector<vector<G1>> & c1, vector<vector<G1>> & c2){
+    Tick tick(__FN__);
+    Fr xInv = x.inverse();
+    int m = open_positions.size();
+    for(int i=0; i<m; i++){
+        for(int j=0; j<m; j++){
+            if(open_positions[i][j] == 0){
+                G1 encryptRnd = G1Rand();
+                c2[i][j] = encryptRnd + solCipher[s[i][j]-1];
+                c1[i][j] = encryptRnd * xInv;
+            }else{
+                c1[i][j] = G1Zero();
+                c2[i][j] = solCipher[s[i][j]-1];
+            }
+        }
+    }
+}
+
+inline void cmt(vector<vector<Fr>> &a, vector<vector<int>> const& s, vector<Fr> &alpha, vector<G1> &A){
+    Tick tick(__FN__);
+    int m = s.size();
+    FrRand(alpha);
+    for(int i=0; i<m; i++){
+        for(int j=0; j<m; j++){
+            a[i][j] = s[i][j];
+            a[i][j+2*m] = a[i][j];
+            a[i][j+m] = a[i][j];
+        }
+        A[i] = pc::ComputeCom(a[i], alpha[i]);
+    }
+}
+
+
+inline void decrypt(Fr const& sk, G1 & c1, G1 & c2, Fr & ret){
+    G1 c = c2 - c1 * sk;
+    for(int i=0; i<=1024; i++){
+        if(g * i == c){
+            ret = i;
+            break;
+        }
+    }
+}
+
+bool check(G1 const& A, Fr const& a, Fr const& alpha){
+    return A == pc::ComputeCom(a, alpha);
+}
+
+bool check(G1 const& A, vector<Fr> const& a, Fr const& alpha){
+    return A == pc::ComputeCom(a, alpha);
+}
+
+bool check(vector<G1> const& A, vector<vector<Fr>> const& a, vector<Fr> const& alpha){
+    for(int i=0; i<A.size(); i++){
+        if(!check(A[i], a[i], alpha[i])) return false;
+    }
+    return true;
+}
+
+bool check(vector<G1> const& A, vector<vector<Fr>> const& a, vector<Fr> const& alpha, int size){
+    for(int i=0; i<size; i++){
+        if(!check(A[i], a[i], alpha[i])) return false;
+    }
+    return true;
+}
+
+bool check(G1 X, G1 const& c1, G1 const& c2, Fr const& a, Fr const& alpha){
+    G1 altC1, altC2;
+    encrypt(X, a, alpha, altC1, altC2);
+    return (c1 == altC1) && (c2 == altC2);
+}
+
+bool check(G1 X, vector<vector<G1>> const& c1, vector<vector<G1>> const& c2, vector<vector<Fr>> const& a, vector<vector<Fr>> const& alpha){
+    for(int i=0; i<c1.size(); i++){
+        for(int j=0; j<c1[i].size(); j++){
+            if(!check(X, c1[i][j], c2[i][j], a[i][j], alpha[i][j])) return false;
+        }
+    }
+    return true;
+}
+
+void generatePerm(vector<Fr> & a, int n) {
+    
+    for(int i = 0 ; i < n; i++){
+        a[i] = i+1 ;
+    }
+
+    for(int i = 1 ; i < n ; i++){
+        int j = rand() % i;
+        Fr b = a[j];
+        a[j] = a[i];
+        a[i] = b;
+    }
+}
+
+void generatePerm(vector<vector<int>> & a, bool isValid = false) {
+    int solution4[4][4] = {
+        {3, 4, 2, 1},
+        {2, 1, 3, 4},
+        {1, 2, 4, 3},
+        {4, 3, 1, 2}
+    };
+    int solution9[9][9] = {
+        {5, 3, 4, 6, 7, 8, 9, 1, 2},
+        {6, 7, 2, 1, 9, 5, 3, 4, 8},
+        {1, 9, 8, 3, 4, 2, 5, 6, 7},
+        {8, 5, 9, 7, 6, 1, 4, 2, 3},
+        {4, 2, 6, 8, 5, 3, 7, 9, 1},
+        {7, 1, 3, 9, 2, 4, 8, 5, 6},
+        {9, 6, 1, 5, 3, 7, 2, 8, 4},
+        {2, 8, 7, 4, 1, 9, 6, 3, 5},
+        {3, 4, 5, 2, 8, 6, 1, 7, 9}
+    };
+
+    if(!isValid){
+        for(int j=0; j<a[0].size(); j++){
+            for(int i = 0; i < a.size(); i++){
+                a[i][j] = i+1 ;
+            }
+            for(int i = 1; i < a.size(); i++){
+                int k = rand() % i;
+                int b = a[k][j];
+                a[k][j] = a[i][j];
+                a[i][j] = b;
+            }
+        }
+    }else{
+        if(a.size() == 4){
+            for(int i=0; i<4; i++){
+                for(int j=0; j<4; j++){
+                    a[i][j] = solution4[i][j];
+                }
+            }
+        }else if(a.size() == 9){
+            for(int i=0; i<9; i++){
+                for(int j=0; j<9; j++){
+                    a[i][j] = solution9[i][j];
+                }
+            }
+        }
+    }
+    
+}
+
+class HadamardProof{
+public:
+    vector<G1> B;
+    vector<G1> TkPlus, TkMinus;
+    vector<Fr> uk, fL, fR;
+    Fr etaL, etaR, etaT;
+    G1 DL, DR, T0, T1;
+    Fr w, z, u;
+
+    HadamardProof(){
+
+    }
+
+    void init(int m){
+        B.resize(m);   
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) const {
+      ar& YAS_OBJECT_NVP("HadamardProof.p",  ("B", B), ("TkPlus", TkPlus), ("TkMinus", TkMinus),
+        ("uk", uk), ("fL", fL),("fR", fR), ("etaL", etaL), ("etaR", etaR), ("etaT", etaT), ("DL", DL), 
+        ("DR", DR), ("T0", T0), ("T1", T1), ("w", w), ("z", z), ("u", u));
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) {
+      ar& YAS_OBJECT_NVP("HadamardProof.p",  ("B", B), ("TkPlus", TkPlus), ("TkMinus", TkMinus),
+        ("uk", uk), ("fL", fL),("fR", fR), ("etaL", etaL), ("etaR", etaR), ("etaT", etaT), ("DL", DL), 
+        ("DR", DR), ("T0", T0), ("T1", T1), ("w", w), ("z", z), ("u", u));
+    }
+};
+
+class CypherProof{
+public:
+    G1 Y;
+    vector<G1> B;
+    vector<vector<G1>> D;
+    vector<vector<Fr>> fa;
+    vector<Fr> eta;
+    Fr e, y, fx;
+
+    void init(int m){
+        B.resize(m);
+        eta.resize(m);
+        fa.resize(m, vector<Fr>(m));
+        D.resize(m, vector<G1>(m));
+
+    }
+
+    CypherProof(){
+        
+    }
+};
+
+
+class SDProof{
+public:
+    Fr e;
+    vector<G1> A;
+    vector<vector<G1>> c1, c2; // m*m的密文
+
+    HadamardProof hadamardProof;
+    CypherProof cypherProof;
+    Sig keyProof1, keyProof2;
+
+    SDProof(int m){
+        int n = 3*m;
+        c1.resize(m, vector<G1>(m));
+        c2.resize(m, vector<G1>(m));
+        A.resize(m);
+        hadamardProof.init(m);
+        cypherProof.init(m);
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) const {
+      ar& YAS_OBJECT_NVP("SDProof.p", ("e", e), ("A", A), ("c1", c1), ("c2", c2), 
+      ("hadamardProof", hadamardProof), ("cypherProof", cypherProof), ("keyProof1", keyProof1));
+    }
+    template <typename Ar>
+    void serialize(Ar& ar) {
+      ar& YAS_OBJECT_NVP("SDProof.p", ("e", e), ("A", A), ("c1", c1), ("c2", c2), 
+      ("hadamardProof", hadamardProof), ("cypherProof", cypherProof), ("keyProof1", keyProof1));
+    }
+};
+
+
+
+class ShuDu{
+public:
+    int m;
+    vector<G1> solCipher;
+
+    ShuDu(int m){
+        this->m = m;
+
+        solCipher.resize(m);
+        solCipher[0] = g;
+        for(int i=1; i<m; i++){
+            solCipher[i] = solCipher[i-1] + g;
+        }
+    }
+
+    void test(){
+        int n = 3*m;
+        Fr x = FrRand();
+        G1 X = g * x;
+        vector<vector<int>> s(m, vector<int>(m)); //m*m
+
+        cout << "m:" << m << " n:" << n <<endl;
+
+        bool validSolu = false;
+        generatePerm(s, validSolu);
+
+        vector<vector<int>> open_positions(m, vector<int>(m, 0));
+        for (int i=0; i<m*m/3; i++){
+             i = rand() % (m * m);
+             int idxI = i / m, idxJ = i % m;
+             open_positions[idxI][idxJ] = s[idxI][idxJ];
+        }
+
+        SDProof sdProof(m);
+
+        generateSDProof(s, x, X, open_positions, sdProof);
+
+        verifySDProof(X, open_positions, sdProof);        
+    }
+
+    void generateSDProof(vector<vector<int>> const& sol, Fr const& x, G1 const& X, vector<vector<int>> const& open_positions, SDProof & sdProof){
+        Tick tick(__FN__);
+        int m = sol.size(), n = 3*m;
+        Fr xInv = x.inverse();
+
+        vector<vector<Fr>> a(m, vector<Fr>(n, 0));
+        vector<Fr> alpha(m);
+        vector<vector<G1>> & c1 = sdProof.c1, &c2 = sdProof.c2;
+        vector<G1> &A = sdProof.A;
+
+/*------------------------生成密文-------------------------------------------------------*/
+        encrypt(x, open_positions, solCipher, sol, c1, c2);
+/*------------------------生成承诺-------------------------------------------------------*/
+        cmt(a, sol, alpha, A);
+
+/*------------------------证明开始--------------------------------------------------------*/
+        Fr v = 1;
+        sdProof.e = FrRand();
+        for(int i=0; i<m; i++){
+            for(int j=0; j<m; j++){
+                a[i][j] = a[i][j] - sdProof.e;
+                a[i][j+m] = a[i][j];
+                a[i][j+2*m] = a[i][j];
+            }
+            v *= (i + 1 - sdProof.e);
+        }
+    
+
+        Sign(g, x, "proof1", &sdProof.keyProof1);
+        Sign(g, x, "proof2", &sdProof.keyProof1, &sdProof.keyProof2);
+        
+        generate_cypher_proof(sdProof.c1, sdProof.A, x, sol, alpha, sdProof.cypherProof);
+
+        generate_hadamard_proof(a, alpha, v, sdProof.hadamardProof);
+    }
+
+    void verifySDProof(G1 const& X, vector<vector<int>> const& open_positions, SDProof & sdProof){
+        Tick tick(__FN__);
+        int m = open_positions.size(), n = 3*m;
+        vector<vector<G1>> &c1 = sdProof.c1, c2 = sdProof.c2;
+        vector<G1> A = sdProof.A;
+
+        bool isValid = true;
+
+        vector<G1> solCipher(m);
+        solCipher[0] = g;
+        for(int i=1; i<m; i++){
+            solCipher[i] = solCipher[i-1] + g;
+        }
+        long long updateCypherTimeStart = get_time();
+        Fr v = 1;
+        for(int i=0; i<m; i++){
+            for(int j=0; j<m; j++){
+                if(open_positions[i][j] != 0){
+                    G1 altC1, altC2;
+                    isValid &= (c1[i][j] == G1Zero() && c2[i][j] == solCipher[open_positions[i][j]-1]);
+                }
+            }
+            v *= (i + 1 - sdProof.e);
+        }
+        if(!isValid) cout << "suduko puzzle is invalid!" << endl;
+        long long updateCypherTimeEnd = get_time();
+        double updateCypherTime = (updateCypherTimeEnd - updateCypherTimeStart) / 1000000.0;
+        cout << "update cipher time:" << updateCypherTime << "ms" << endl;
+
+        G1 cmtE = pc::ComputeCom(vector<Fr>(n, 1), 0) * (0 - sdProof.e);
+        for(int i=0; i<m; i++){
+            A[i] = A[i] + cmtE;
+        }
+
+        Fr extractX = extract(g, X, &sdProof.keyProof1, &sdProof.keyProof2, "proof1", "proof2");
+        cout << "extract x isValid:" << (extractX == extractX) << endl;
+
+        verify_hadamard_proof(A, v, sdProof.hadamardProof);
+
+        verify_cypher_proof(X, sdProof.c1, sdProof.c2, sdProof.A, sdProof.cypherProof);
+    }
+
+    //如果代码verify中的代码放到generate中跑,得到结果为true,但是verify结果为false,分别验证是左边的错误还是右边的错误
+
+    void generate_cypher_proof(vector<vector<G1>> const& c1, vector<G1> const& A, Fr const& x, vector<vector<int>> const& s, vector<Fr> const& alpha, CypherProof & proof){
+        Tick tick(__FN__);
+        int m = s.size(), n = 3*m;
+      
+        vector<vector<Fr>> d(m, vector<Fr>(m, 0)), b(m, vector<Fr>(n, 0));
+        vector<Fr> beta(m);
+        proof.y = FrRand();
+
+        proof.Y = g * proof.y;
+    
+        FrRand(beta);
+        for(int i=0; i<m; i++){
+            FrRand(d[i]);
+            for(int j=0; j<m; j++){
+                b[i][j] = d[i][j];
+                b[i][j + m] = d[i][j];
+                b[i][j + 2*m] = d[i][j];
+                proof.D[i][j] = c1[i][j] * proof.y + g * d[i][j];
+            }
+        }
+
+        for(int i=0; i<m; i++){
+            proof.B[i] = pc::ComputeCom(b[i], beta[i]);
+        }
+
+        proof.e = FrRand();
+        
+        proof.fx = proof.y + proof.e * x;
+        for(int i=0; i<m; i++){
+            for(int j=0; j<m; j++){
+                proof.fa[i][j] = d[i][j] + s[i][j] * proof.e;
+            }
+            proof.eta[i] = beta[i] + proof.e * alpha[i];
+        }
+    }
+    
+    //这里传入的cypher是N*m
+    bool verify_cypher_proof(G1 const& X, vector<vector<G1>> const& c1, vector<vector<G1>> const& c2, vector<G1> const& A, CypherProof & proof){
+        Tick tick(__FN__);
+        int m = A.size(), n = 3*m;
+
+        bool isValid = true;
+        isValid &= (g * proof.fx == proof.Y + X * proof.e);
+        if(!isValid) cout << "key proof is invalid!" << endl;
+        for(int i=0; i<m; i++){
+            proof.fa[i].resize(n);
+            for(int j=0; j<m; j++){
+                proof.fa[i][j+m] = proof.fa[i][j] ;
+                proof.fa[i][j+2*m] = proof.fa[i][j] ;
+                isValid &= (c1[i][j] * proof.fx + g * proof.fa[i][j] == proof.D[i][j] + c2[i][j] * proof.e);
+            }
+        }
+        if(!isValid) cout << "cypher proof is invalid!" << endl;
+        for(int i=0; i<m; i++){
+            isValid &= (pc::ComputeCom(proof.fa[i], proof.eta[i]) == proof.B[i] + A[i] * proof.e);
+        }
+        if(!isValid) cout << "commitment proof is invalid" << endl;
+        cout << "is cyphr proof valid:" << isValid << endl;
+        return isValid;
+    }
+
+    void generate_hadamard_proof(vector<vector<Fr>> const& a, vector<Fr> const& alpha, Fr const& v, HadamardProof &proof){
+        Tick tick(__FN__);
+        int m = a.size(), n = 3*m;
+
+/*-----------------------------生成承诺B------------------------------------------------------*/
+        vector<vector<Fr>> b(m, vector<Fr>(n));
+        vector<Fr> beta(m);
+
+        b[0] = a[0];
+        for(int i=1; i<m-1; i++){
+            HadamardProduct(b[i], b[i-1], a[i]);
+        }
+
+        for(int i=0; i<n; i++){
+            b[m-1][i] = v;
+        }
+
+        beta[0] = alpha[0];
+        beta[m-1] = 0;
+        for(int i=1; i<m-1; i++){
+            beta[i] = FrRand();
+        }
+
+        for(int i=1; i<m; i++){
+            proof.B[i] = pc::ComputeCom(b[i], beta[i]);
+        }
+
+        // print(b);
+        // if(!check(B, b, beta)) cout << "check commitment B fail!" << endl;
+        // for(int i=0; i<n; i++){
+        //     cout << b[m-1][i] << " ";
+        // }
+        // cout << endl << "-----------------------------" << endl;
+        
+/*------------------------------生成承诺L, R的witness-------------------------------------------------------------------------*/        
+        // vector<G1> L(m, G1Zero()),  R(A.begin()+1, A.end());
+        vector<vector<Fr>> l(m, vector<Fr>(n, 0)), r(a.begin()+1, a.end());
+        vector<Fr> w(m-1), iota(m, 0), rho(alpha.begin()+1, alpha.end());
+
+        w[0] = FrRand();
+        for(int i=1; i<m-1; i++){
+            w[i] = w[i-1] * w[0];
+        }
+
+        for(int i=0; i<m-1; i++){
+            // L[i] = B[i] * w[i];
+            l[i] = b[i] * w[i];
+            iota[i] = w[i] * beta[i];
+        }
+
+        for(int i=1; i<m; i++){
+            // L[m-1] = L[m-1] + (B[i] * w[i-1]);
+            l[m-1] += b[i] * w[i-1];
+            iota[m-1] += beta[i] * w[i-1];
+        }
+
+        r.insert(r.end(), vector<Fr>(n, -1));
+        rho.insert(rho.end(), 0);
+        // R.insert(R.end(), pc::ComputeCom(r[m-1], rho[m-1]));
+
+        proof.w = w[0];
+
+        // vector<Fr> sum (n, 0);
+        // for(int i=0; i<m; i++){
+        //     sum += HadamardProduct(l[i], r[i]);
+        // }
+        // print(sum);
+        // cout << "left == right ? " << vector_eq(sum, vector<Fr>(n, 0)) << endl;//test---------------------
+        // if(!check(L, l, iota)) cout << "check commitment L fail!" << endl;//test---------------------
+        // if(!check(R, r, rho)) cout << "check commitment R fail!" << endl;//test---------------------
+
+/*-------------------------对向量l, r补齐------------------------------------------------------------------------------------------*/
+        // G1 T = G1One() * 0;
+        Fr t = 0, tau = 0;
+        vector<Fr> z(n);
+
+        z[0] = FrRand();
+        for(int i=1; i<n; i++){
+            z[i] = z[i-1] * z[0];
+        }
+
+        int k = misc::Pow2UB(m);
+
+        // L.insert(L.end(), k, G1Zero());
+        l.insert(l.end(), k, vector<Fr>(n, 0));
+        iota.insert(iota.end(), k-m, 0);
+
+        // R.insert(R.end(), k, G1Zero());
+        r.insert(r.end(), k, vector<Fr>(n, 0));
+        rho.insert(rho.end(), k-m, 0);
+
+        // for(int i=0; i<L.size(); i++){
+        //     cout << "L" << i << ":" << L[i] << endl;
+        // }
+        // for(int i=0; i<L.size(); i++){
+        //     cout << "R" << i << ":" << R[i] << endl;
+        // }
+        // cout << "z[n-1]:" << z[n-1] << endl;
+        // cout << "w[m-2]:" << w[m-2] << endl;
+
+        k = k >> 1;
+
+        proof.z = z[0];
+
+        // print(l);
+        // print(r);
+
+/*------------------------递归: z \circ \sum l_i r_i = t----------------------------------------------------------------------------*/
+        while(k >= 1){
+            // vector<Fr> sum (n, 0); //test----------------------
+            // Fr target = 0; //test----------------------
+            Fr tkPlus = 0, tkMinus = 0, tauKPlus = FrRand(), tauKMinus = FrRand();
+            // G1 TkPlus, TkMinus;
+
+            vector<Fr> tkPlusAux(n, 0), tkMinusAux(n, 0);
+            for(int i=0; i<k; i++){
+                tkPlusAux = HadamardProduct(l[i], r[i+k]) + tkPlusAux;
+                tkMinusAux = HadamardProduct(l[i+k], r[i]) + tkMinusAux;
+            }
+            tkPlus = InnerProduct(tkPlusAux, z);
+            tkMinus = InnerProduct(tkMinusAux, z);
+
+            Fr u = FrRand(), uInv = u.inverse(), uPow2 = (u * u), uPow2Inv = uPow2.inverse();
+
+            proof.TkPlus.insert(proof.TkPlus.end(), pc::ComputeCom(tkPlus, tauKPlus));
+            proof.TkMinus.insert(proof.TkMinus.end(), pc::ComputeCom(tkMinus, tauKMinus));
+            proof.uk.insert(proof.uk.end(), u);
+        
+            for(int i=0; i<k; i++){
+                // L[i] = L[i] * u + L[i+k] * uInv;
+                l[i] = l[i] * u + l[i+k] * uInv;
+                iota[i] = iota[i] * u + iota[i+k] * uInv;
+
+                // R[i] = R[i] * uInv + R[i+k] * u;
+                r[i] = r[i] * uInv + r[i+k] * u;
+                rho[i] = rho[i] * uInv + rho[i+k] * u;
+
+                // if(!check(L, l, iota, k)) cout << "check commitment L' fail!" << endl; //test----------------------
+                // if(!check(R, r, rho, k)) cout << "check commitment R' fail!" << endl; //test----------------------
+                // target += InnerProduct(HadamardProduct(l[i], z), r[i]); //test----------------------
+            }
+
+            // T =  TkPlus * uPow2 + T + TkMinus * uPow2Inv;
+            t =  tkPlus * uPow2 + t + tkMinus * uPow2Inv;
+            tau =  tauKPlus * uPow2 + tau + tauKMinus * uPow2Inv;
+
+            // if(!check(T, t, tau)) cout << "check commitment T' fail!" << endl; //test---------------------
+            // cout << "m:" << m << "k:" << k << " equal:" << (t == target) << endl;//test---------------------
+
+            k = k >> 1;
+        }
+/*-------------------L, R, T: z * l * r = t-------------------------------------------------------*/
+        vector<Fr> dL(n), dR(n);
+        Fr deltaL = FrRand(), deltaR = FrRand();
+
+        FrRand(dL);
+        FrRand(dR);
+
+        proof.DL = pc::ComputeCom(dL, deltaL);
+        proof.DR = pc::ComputeCom(dR, deltaR);
+
+
+        Fr tau0 = FrRand(), tau1 = FrRand();
+        Fr t0 = InnerProduct(HadamardProduct(z, dL), dR), t1 = InnerProduct(HadamardProduct(l[0], dR) + HadamardProduct(dL, r[0]), z);
+
+        proof.T0 = pc::ComputeCom(t0, tau0);
+        proof.T1 = pc::ComputeCom(t1, tau1);
+
+
+        Fr u = FrRand();
+        proof.fL = dL + l[0] * u, proof.fR = dR + r[0] * u;
+        proof.etaL = deltaL + u * iota[0], proof.etaR = deltaR + u * rho[0], proof.etaT = u * u * tau + u * tau1 + tau0;
+
+        proof.u = u;
+
+        // G1 L0 = pc::ComputeCom(l[0], iota[0]), R0 = pc::ComputeCom(r[0], rho[0]), T = pc::ComputeCom(t, tau);
+        // cout << "L0:" << L0 << "\n" << "R0:" << R0 << "\n" << "T:" << T << endl;
+    }
+
+    bool verify_hadamard_proof(vector<G1> & A, Fr const& v, HadamardProof &proof){
+        Tick tick(__FN__);
+        int m = A.size(), n = 3 * m, k = misc::Pow2UB(m);
+
+        proof.B[0] = A[0];
+
+/*--------------------------生存承诺L, R----------------------------------------------------*/
+        vector<Fr> w(m-1);
+        w[0] = proof.w;
+        for(int i=1; i<m-1; i++){
+            w[i] = w[i-1] * w[0];
+        }
+
+        vector<G1> L(m, G1Zero()),  R(A.begin()+1, A.end());
+        for(int i=0; i<m-1; i++){
+            L[i] = proof.B[i] * w[i];
+        }
+
+        for(int i=1; i<m; i++){
+            L[m-1] = L[m-1] + (proof.B[i] * w[i-1]);
+        }
+
+        R.insert(R.end(), pc::ComputeCom(vector<Fr>(n, -1), 0));
+
+        if(k > m){
+            L.resize(k, G1Zero());
+            R.resize(k, G1Zero());
+        }
+
+        k = misc::Log2UB(k);
+/*-------------------------递归生成L, R, T---------------------------------------------------*/
+        vector<Fr> z(n);
+        z[0] = proof.z;
+
+        for(int i=1; i<n; i++){
+            z[i] = z[i-1] * z[0];
+        }
+
+        // for(int i=0; i<L.size(); i++){
+        //     cout << "L" << i << ":" << L[i] << endl;
+        // }
+        // for(int i=0; i<L.size(); i++){
+        //     cout << "R" << i << ":" << R[i] << endl;
+        // }
+        // cout << "z[n-1]:" << z[n-1] << endl;
+        // cout << "w[m-2]:" << w[m-2] << endl;
+
+        vector<Fr> ukInv(proof.uk.size());
+        for(int i=0; i<ukInv.size(); i++){
+            ukInv[i] = proof.uk[i].inverse();
+        }
+
+        vector<Fr> multiExpCoeffL((1 << k), 1);
+        vector<Fr> multiExpCoeffR((1 << k), 1);
+        for(int i=0; i<multiExpCoeffL.size(); i++){
+            for(int j=k-1; j>=0; j--){
+                if((i & (1<<j)) != 0){
+                    multiExpCoeffL[i] = multiExpCoeffL[i] * ukInv[k - 1 - j];
+                }else{
+                    multiExpCoeffL[i] = multiExpCoeffL[i] * proof.uk[k - 1 - j];
+                }
+                // cout << "i:" << i << " j:" << j << " (i & (1<<j):" << (i & (1<<j)) << " u:" << ((i & (1<<j)) == 1 ? "-" : "+") << (k - 1 - j) << endl;
+            }
+            multiExpCoeffR[i] = multiExpCoeffL[i].inverse();
+        }
+        
+        // cout << "multiExpCoeffLSize:" << multiExpCoeffL.size() << " ukSize:" << proof.uk.size() << " k:" << k << " LSize:" << L.size() << endl;
+
+        G1 L0 = pc::ComputeCom(1 << k, L.data(), multiExpCoeffL.data(), 0);
+        G1 R0 = pc::ComputeCom(1 << k, R.data(), multiExpCoeffR.data(), 0);
+        G1 T = G1Zero();
+
+        for(int i=0; i<k; i++){
+            T = proof.TkPlus[i] * (proof.uk[i] * proof.uk[i]) + T + proof.TkMinus[i] * (ukInv[i] * ukInv[i]);
+        }
+
+        // int idx = 0;
+        // while(k >= 1){
+        //     for(int i=0; i<(1 << (k-1)); i++){
+        //         L[i] = L[i] * proof.uk[idx] + L[i+(1 << (k-1))] * ukInv[idx];
+        //     }   
+        //     k--;
+        //     idx++;
+        // }
+        // cout << "L[0]:" << L[0] << endl;
+        // cout << "L0:" << L0 << "\n" << "R0:" << R0 << "\n" << "T:" << T << endl;
+        
+/*--------------------L, R, T: z * l * r = t--------------------------------------------------*/
+        bool isValid = (proof.B[0] == A[0] && proof.B[m-1] == pc::ComputeCom(vector<Fr>(n, v), 0));
+        isValid &= (proof.DL + L0 * proof.u == pc::ComputeCom(proof.fL, proof.etaL));
+        if(!isValid) cout << "DL is invalid!" << endl;
+        isValid &= (proof.DR + R0 * proof.u == pc::ComputeCom(proof.fR, proof.etaR));
+        if(!isValid) cout << "DR is invalid!" << endl;
+        isValid &= (proof.T0 + proof.T1 * proof.u + T * proof.u * proof.u == pc::ComputeCom(InnerProduct(HadamardProduct(proof.fL, proof.fR), z), proof.etaT));
+        cout << "hadamard proof isValid:" << isValid << endl;
+
+        return isValid;
+    }
+    
+};
+
+
+bool DEBUG_CHECK = false;
+bool BIG_MODE = false;
+bool DISABLE_TBB = true;
+
+bool InitAll(std::string const& data_dir) {
+    InitEcc();
+
+    std::string const kFileName = BIG_MODE ? "pds_pub_big.bin" : "pds_pub.bin";
+    auto ecc_pds_file = data_dir + "/" + kFileName;
+    if (!pc::OpenOrCreatePdsPub(ecc_pds_file)) {
+    std::cerr << "Open or create pds pub file " << ecc_pds_file << " failed\n";
+    return false;
+    }
+
+    g = pc::PcU();
+
+    return true;
+}
+
+int main(int argc, char *argv[]){
+    if(argc <= 1){
+        cout << "input m!" <<endl;
+        return 0;
+    }
+
+    int m = atoi(argv[1]);
+    m = m * m;
+
+    srand((unsigned)time(NULL));
+
+    pc::Base::SetGSize(m*3);
+
+    InitAll("."); //注意base生成的长度
+    
+    ShuDu sd(m);
+    sd.test();
+
+    return 0;
+}

@@ -1,0 +1,936 @@
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:1.85645KB
+m:9 n:27
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 8 ms
+  ==> void cmt
+  <== void cmt tick: 2 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 2 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 6 ms
+<== void ShuDu::generateSDProof tick: 19 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 22 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 3 ms
+<== void ShuDu::verifySDProof tick: 26 ms
+communication size:0.0193911MB	0.0174599GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 0 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:3.18945KB
+m:16 n:48
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 11 ms
+  ==> void cmt
+  <== void cmt tick: 3 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 4 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 13 ms
+<== void ShuDu::generateSDProof tick: 33 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 62 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 4 ms
+<== void ShuDu::verifySDProof tick: 67 ms
+communication size:0.0476027MB	0.0174599GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 0 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:4.90332KB
+m:25 n:75
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 29 ms
+  ==> void cmt
+  <== void cmt tick: 9 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 6 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 31 ms
+<== void ShuDu::generateSDProof tick: 77 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 110 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 7 ms
+<== void ShuDu::verifySDProof tick: 117 ms
+communication size:0.10216MB	0.0174599GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:6.99805KB
+m:36 n:108
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 60 ms
+  ==> void cmt
+  <== void cmt tick: 13 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 9 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 52 ms
+<== void ShuDu::generateSDProof tick: 135 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 180 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 9 ms
+<== void ShuDu::verifySDProof tick: 189 ms
+communication size:0.1965MB	0.0174599GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:9.47363KB
+m:49 n:147
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 110 ms
+  ==> void cmt
+  <== void cmt tick: 30 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 12 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 105 ms
+<== void ShuDu::generateSDProof tick: 259 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 275 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 12 ms
+<== void ShuDu::verifySDProof tick: 287 ms
+communication size:0.347089MB	0.0213661GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:12.3301KB
+m:64 n:192
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 191 ms
+  ==> void cmt
+  <== void cmt tick: 41 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 15 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 151 ms
+<== void ShuDu::generateSDProof tick: 400 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 510 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 13 ms
+<== void ShuDu::verifySDProof tick: 524 ms
+communication size:0.57371MB	0.0213661GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 2 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:15.5674KB
+m:81 n:243
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 304 ms
+  ==> void cmt
+  <== void cmt tick: 55 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 19 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 212 ms
+<== void ShuDu::generateSDProof tick: 592 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 710 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 17 ms
+<== void ShuDu::verifySDProof tick: 727 ms
+communication size:0.899187MB	0.0255203GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 3 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:19.1855KB
+m:100 n:300
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 465 ms
+  ==> void cmt
+  <== void cmt tick: 70 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 24 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 290 ms
+<== void ShuDu::generateSDProof tick: 851 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 955 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 19 ms
+<== void ShuDu::verifySDProof tick: 975 ms
+communication size:1.34889MB	0.0328941GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 3 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:23.1846KB
+m:121 n:363
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 680 ms
+  ==> void cmt
+  <== void cmt tick: 89 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 29 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 387 ms
+<== void ShuDu::generateSDProof tick: 1188 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 1260 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 21 ms
+<== void ShuDu::verifySDProof tick: 1282 ms
+communication size:1.95167MB	0.0358353GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 4 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:27.5645KB
+m:144 n:432
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 959 ms
+  ==> void cmt
+  <== void cmt tick: 112 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 35 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 513 ms
+<== void ShuDu::generateSDProof tick: 1622 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 2058 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 24 ms
+<== void ShuDu::verifySDProof tick: 2084 ms
+communication size:2.73968MB	0.0456238GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 5 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:32.3252KB
+m:169 n:507
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 1319 ms
+  ==> void cmt
+  <== void cmt tick: 137 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 41 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 662 ms
+<== void ShuDu::generateSDProof tick: 2163 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 2582 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 27 ms
+<== void ShuDu::verifySDProof tick: 2611 ms
+communication size:3.74686MB	0.0603294GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 6 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:37.4668KB
+m:196 n:588
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 1774 ms
+  ==> void cmt
+  <== void cmt tick: 248 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 49 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 1013 ms
+<== void ShuDu::generateSDProof tick: 3087 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 3196 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 32 ms
+<== void ShuDu::verifySDProof tick: 3230 ms
+communication size:5.01135MB	0.0757294GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 6 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:42.9893KB
+m:225 n:675
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 2343 ms
+  ==> void cmt
+  <== void cmt tick: 296 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 56 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 1243 ms
+<== void ShuDu::generateSDProof tick: 3943 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 3905 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 35 ms
+<== void ShuDu::verifySDProof tick: 3942 ms
+communication size:6.57395MB	0.0816116GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 7 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:48.8926KB
+m:256 n:768
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 3032 ms
+  ==> void cmt
+  <== void cmt tick: 345 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 64 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 1520 ms
+<== void ShuDu::generateSDProof tick: 4966 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 4735 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 38 ms
+<== void ShuDu::verifySDProof tick: 4775 ms
+communication size:8.47895MB	0.0907364GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 8 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:55.1768KB
+m:289 n:867
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 3860 ms
+  ==> void cmt
+  <== void cmt tick: 406 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 73 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 1861 ms
+<== void ShuDu::generateSDProof tick: 6206 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 5697 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 45 ms
+<== void ShuDu::verifySDProof tick: 5744 ms
+communication size:10.7724MB	0.111576GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 9 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:61.8418KB
+m:324 n:972
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 4852 ms
+  ==> void cmt
+  <== void cmt tick: 474 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 83 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 2232 ms
+<== void ShuDu::generateSDProof tick: 7649 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 6800 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 49 ms
+<== void ShuDu::verifySDProof tick: 6851 ms
+communication size:13.5043MB	0.119419GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 11 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:68.8877KB
+m:361 n:1083
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 6023 ms
+  ==> void cmt
+  <== void cmt tick: 813 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 95 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 3225 ms
+<== void ShuDu::generateSDProof tick: 10166 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 8070 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 57 ms
+<== void ShuDu::verifySDProof tick: 8130 ms
+communication size:16.7277MB	0.154713GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 12 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:76.3145KB
+m:400 n:1200
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 7389 ms
+  ==> void cmt
+  <== void cmt tick: 918 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 106 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 3758 ms
+<== void ShuDu::generateSDProof tick: 12182 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 9507 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 61 ms
+<== void ShuDu::verifySDProof tick: 9573 ms
+communication size:20.4984MB	0.171635GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 13 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:84.1221KB
+m:441 n:1323
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 8984 ms
+  ==> void cmt
+  <== void cmt tick: 1053 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 118 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 4356 ms
+<== void ShuDu::generateSDProof tick: 14525 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 11141 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 65 ms
+<== void ShuDu::verifySDProof tick: 11211 ms
+communication size:24.8754MB	0.209614GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 14 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:92.3105KB
+m:484 n:1452
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 10826 ms
+  ==> void cmt
+  <== void cmt tick: 1184 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 132 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 5030 ms
+<== void ShuDu::generateSDProof tick: 17187 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 13008 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 69 ms
+<== void ShuDu::verifySDProof tick: 13083 ms
+communication size:29.9206MB	0.228954GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 16 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:100.88KB
+m:529 n:1587
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 12938 ms
+  ==> void cmt
+  <== void cmt tick: 1329 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 146 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 5870 ms
+<== void ShuDu::generateSDProof tick: 20300 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 17818 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 79 ms
+<== void ShuDu::verifySDProof tick: 17905 ms
+communication size:35.6992MB	0.335087GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 17 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:109.83KB
+m:576 n:1728
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 15336 ms
+  ==> void cmt
+  <== void cmt tick: 1498 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 161 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 6715 ms
+<== void ShuDu::generateSDProof tick: 23729 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 20329 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 84 ms
+<== void ShuDu::verifySDProof tick: 20421 ms
+communication size:42.2787MB	0.350834GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 18 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:119.161KB
+m:625 n:1875
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 18077 ms
+  ==> void cmt
+  <== void cmt tick: 1692 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 182 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 7652 ms
+<== void ShuDu::generateSDProof tick: 27628 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 23067 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 88 ms
+<== void ShuDu::verifySDProof tick: 23164 ms
+communication size:49.7304MB	0.413578GB memory
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 20 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:128.873KB
+m:676 n:2028
+==> void ShuDu::generateSDProof
+  ==> void encrypt
+  <== void encrypt tick: 21115 ms
+  ==> void cmt
+  <== void cmt tick: 1860 ms
+  ==> void ShuDu::generate_cypher_proof
+  <== void ShuDu::generate_cypher_proof tick: 194 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void schnorr::Sign
+  <== void schnorr::Sign tick: 0 ms
+  ==> void ShuDu::generate_hadamard_proof
+  <== void ShuDu::generate_hadamard_proof tick: 8657 ms
+<== void ShuDu::generateSDProof tick: 31854 ms
+==> void ShuDu::verifySDProof
+  ==> bool ShuDu::verify_cypher_proof
+ciphertext proof isValid:1
+  <== bool ShuDu::verify_cypher_proof tick: 26127 ms
+  ==> mcl::bn::Fr schnorr::extract
+  <== mcl::bn::Fr schnorr::extract tick: 0 ms
+extract x isValid:1
+  ==> bool ShuDu::verify_hadamard_proof
+hadamard proof isValid:1
+  <== bool ShuDu::verify_hadamard_proof tick: 93 ms
+<== void ShuDu::verifySDProof tick: 26231 ms
+communication size:58.1282MB	0.437107GB memory

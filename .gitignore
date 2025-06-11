@@ -1,0 +1,63 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.d.o
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# Executables
+*.exe
+*.out
+*.app
+
+# vc
+*.vc.*
+*.ipch
+x64/Debug/
+x64/Release/
+.vs/
+ipch/
+*.suo
+*.pdb
+*.log
+*.tlog
+*.idb
+*.sdf
+*.bin
+*.leu
+bin/ 
+
+build/
+
+win/lib
+win/include
+depends/install
+
+win/pod_core
+win/pod_dummy
+win/pod_publish
+win/vrs_cache
+
+data/vgg16/working/
+
+.vscode
+.DS_Store
+
+~*.docx

@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{F1BB4665-60E3-48F5-A9E6-BED17C0D36E2}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>pod_setup</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="props\vcpkg.64.debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="props\vcpkg.64.release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG_CHECK;USE_MCL_FR_DIRECTLY;BOOST_BIND_GLOBAL_PLACEHOLDERS;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;USE_TBB;_WIN32_WINNT=0x0600;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)/../thirdparty/csv;$(SolutionDir)/../thirdparty/yas/include;$(SolutionDir)/../thirdparty;$(SolutionDir)/../public</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 /Zc:twoPhase- /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <OpenMPSupport>false</OpenMPSupport>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\depends\libsnark\msvc\lib\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>USE_MCL_FR_DIRECTLY;BOOST_BIND_GLOBAL_PLACEHOLDERS;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;USE_TBB;_WIN32_WINNT=0x0600;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)/../thirdparty/csv;$(SolutionDir)/../thirdparty/yas/include;$(SolutionDir)/../thirdparty;$(SolutionDir)/../public</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 /Zc:twoPhase- %(AdditionalOptions)</AdditionalOptions>
+      <OpenMPSupport>false</OpenMPSupport>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\depends\libsnark\msvc\lib\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\pod_dummy\main.cc" />
+    <ClCompile Include="..\public\ecc\ecc.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\pod_dummy\Makefile" />
+    <None Include="..\pod_dummy\README.md" />
+    <None Include="..\public\bp\readme.md" />
+    <None Include="..\public\circuit\fixed_point\readme.md" />
+    <None Include="..\public\circuit\readme.md" />
+    <None Include="..\public\clink\readme.md" />
+    <None Include="..\public\ecc\readme.md" />
+    <None Include="..\public\groth09\readme.md" />
+    <None Include="..\public\utils\readme.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\public\bp\bp.h" />
+    <ClInclude Include="..\public\bp\protocol1.h" />
+    <ClInclude Include="..\public\bp\protocol2.h" />
+    <ClInclude Include="..\public\bp\protocol31.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\abs_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\add_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\div_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\exp_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\fixed_point.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\ip_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\max_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\misc.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\mul_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\relu2_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\relu_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\sigmoid_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\sign_gadget.h" />
+    <ClInclude Include="..\public\circuit\fixed_point\precision_gadget.h" />
+    <ClInclude Include="..\public\circuit\has0_gadget.h" />
+    <ClInclude Include="..\public\circuit\match_gadget.h" />
+    <ClInclude Include="..\public\circuit\mimc5.h" />
+    <ClInclude Include="..\public\circuit\mimc5_gadget.h" />
+    <ClInclude Include="..\public\circuit\mnist\convolution.h" />
+    <ClInclude Include="..\public\circuit\mnist\mnist.h" />
+    <ClInclude Include="..\public\circuit\permutation_gadget.h" />
+    <ClInclude Include="..\public\circuit\poseidon.h" />
+    <ClInclude Include="..\public\circuit\poseidon_gadget.h" />
+    <ClInclude Include="..\public\circuit\sha256c.h" />
+    <ClInclude Include="..\public\circuit\sha256c_gadget.h" />
+    <ClInclude Include="..\public\circuit\substr_gadget.h" />
+    <ClInclude Include="..\public\circuit\sudoku_gadget.h" />
+    <ClInclude Include="..\public\circuit\test_all.h" />
+    <ClInclude Include="..\public\circuit\test_gadget.h" />
+    <ClInclude Include="..\public\circuit\vgg16\ip_gadget.h" />
+    <ClInclude Include="..\public\circuit\vgg16\pooling_gadget.h" />
+    <ClInclude Include="..\public\circuit\vgg16\relubn_gadget.h" />
+    <ClInclude Include="..\public\circuit\vgg16\vgg16.h" />
+    <ClInclude Include="..\public\clink\adapt.h" />
+    <ClInclude Include="..\public\clink\affine.h" />
+    <ClInclude Include="..\public\clink\details.h" />
+    <ClInclude Include="..\public\clink\divide.h" />
+    <ClInclude Include="..\public\clink\equality.h" />
+    <ClInclude Include="..\public\clink\equality2.h" />
+    <ClInclude Include="..\public\clink\equal_ip.h" />
+    <ClInclude Include="..\public\clink\match.h" />
+    <ClInclude Include="..\public\clink\matchpack.h" />
+    <ClInclude Include="..\public\clink\matrix.h" />
+    <ClInclude Include="..\public\clink\mnist\demo.h" />
+    <ClInclude Include="..\public\clink\mnist\mnist.h" />
+    <ClInclude Include="..\public\clink\mnist\dbl.h" />
+    <ClInclude Include="..\public\clink\opening.h" />
+    <ClInclude Include="..\public\clink\overlap.h" />
+    <ClInclude Include="..\public\clink\pack.h" />
+    <ClInclude Include="..\public\clink\parallel_r1cs.h" />
+    <ClInclude Include="..\public\clink\clink.h" />
+    <ClInclude Include="..\public\clink\pod.h" />
+    <ClInclude Include="..\public\clink\substr.h" />
+    <ClInclude Include="..\public\clink\substrpack.h" />
+    <ClInclude Include="..\public\clink\sudoku.h" />
+    <ClInclude Include="..\public\clink\vgg16\auxi_pub.h" />
+    <ClInclude Include="..\public\clink\vgg16\context.h" />
+    <ClInclude Include="..\public\clink\vgg16\conv_prove.h" />
+    <ClInclude Include="..\public\clink\vgg16\conv_pub.h" />
+    <ClInclude Include="..\public\clink\vgg16\conv_verify.h" />
+    <ClInclude Include="..\public\clink\vgg16\dense_prove.h" />
+    <ClInclude Include="..\public\clink\vgg16\dense_verify.h" />
+    <ClInclude Include="..\public\clink\vgg16\image_com.h" />
+    <ClInclude Include="..\public\clink\vgg16\infer.h" />
+    <ClInclude Include="..\public\clink\vgg16\para_com.h" />
+    <ClInclude Include="..\public\clink\vgg16\para_dbl.h" />
+    <ClInclude Include="..\public\clink\vgg16\para_fr.h" />
+    <ClInclude Include="..\public\clink\vgg16\para_pub.h" />
+    <ClInclude Include="..\public\clink\vgg16\policy.h" />
+    <ClInclude Include="..\public\clink\vgg16\pooling_prove.h" />
+    <ClInclude Include="..\public\clink\vgg16\pooling_pub.h" />
+    <ClInclude Include="..\public\clink\vgg16\pooling_verify.h" />
+    <ClInclude Include="..\public\clink\vgg16\prove.h" />
+    <ClInclude Include="..\public\clink\vgg16\publish.h" />
+    <ClInclude Include="..\public\clink\vgg16\r1cs.h" />
+    <ClInclude Include="..\public\clink\vgg16\r1cs_pub.h" />
+    <ClInclude Include="..\public\clink\vgg16\relubn_prove.h" />
+    <ClInclude Include="..\public\clink\vgg16\relubn_pub.h" />
+    <ClInclude Include="..\public\clink\vgg16\relubn_verify.h" />
+    <ClInclude Include="..\public\clink\vgg16\verify.h" />
+    <ClInclude Include="..\public\clink\vgg16\vgg16.h" />
+    <ClInclude Include="..\public\clink\vrs\vrs_basic.h" />
+    <ClInclude Include="..\public\clink\vrs\vrs_cache.h" />
+    <ClInclude Include="..\public\clink\vrs\vrs_large.h" />
+    <ClInclude Include="..\public\clink\vrs\vrs_pub.h" />
+    <ClInclude Include="..\public\clink\vrs\vrs_scheme.h" />
+    <ClInclude Include="..\public\cmd\cmd.h" />
+    <ClInclude Include="..\public\cmd\match_query.h" />
+    <ClInclude Include="..\public\cmd\substr_query.h" />
+    <ClInclude Include="..\public\debug\flags.h" />
+    <ClInclude Include="..\public\ecc\ecc.h" />
+    <ClInclude Include="..\public\ecc\funcs.h" />
+    <ClInclude Include="..\public\ecc\multiexp.h" />
+    <ClInclude Include="..\public\ecc\parallel_multiexp.h" />
+    <ClInclude Include="..\public\ecc\pc_base.h" />
+    <ClInclude Include="..\public\ecc\serialize.h" />
+    <ClInclude Include="..\public\ecc\types.h" />
+    <ClInclude Include="..\public\groth09\details.h" />
+    <ClInclude Include="..\public\groth09\groth09.h" />
+    <ClInclude Include="..\public\groth09\policy.h" />
+    <ClInclude Include="..\public\groth09\sec43b.h" />
+    <ClInclude Include="..\public\groth09\sec51a.h" />
+    <ClInclude Include="..\public\groth09\sec51b.h" />
+    <ClInclude Include="..\public\groth09\sec51c.h" />
+    <ClInclude Include="..\public\groth09\sec52a.h" />
+    <ClInclude Include="..\public\groth09\sec52b.h" />
+    <ClInclude Include="..\public\groth09\sec53a.h" />
+    <ClInclude Include="..\public\groth09\sec53b.h" />
+    <ClInclude Include="..\public\hyrax\a1.h" />
+    <ClInclude Include="..\public\hyrax\a2.h" />
+    <ClInclude Include="..\public\hyrax\a3.h" />
+    <ClInclude Include="..\public\hyrax\a4.h" />
+    <ClInclude Include="..\public\hyrax\details.h" />
+    <ClInclude Include="..\public\hyrax\hyrax.h" />
+    <ClInclude Include="..\public\iop\iop.h" />
+    <ClInclude Include="..\public\log\log.h" />
+    <ClInclude Include="..\public\log\tick.h" />
+    <ClInclude Include="..\public\misc\check.h" />
+    <ClInclude Include="..\public\misc\debug.h" />
+    <ClInclude Include="..\public\misc\funcs.h" />
+    <ClInclude Include="..\public\misc\func_alias.h" />
+    <ClInclude Include="..\public\misc\misc.h" />
+    <ClInclude Include="..\public\misc\mpz.h" />
+    <ClInclude Include="..\public\misc\msvc_hack.h" />
+    <ClInclude Include="..\public\misc\rng.h" />
+    <ClInclude Include="..\public\misc\serialize.h" />
+    <ClInclude Include="..\public\misc\types.h" />
+    <ClInclude Include="..\public\misc\vectorop.h" />
+    <ClInclude Include="..\public\parallel\parallel.h" />
+    <ClInclude Include="..\public\public.h" />
+    <ClInclude Include="..\public\snark\snark.h" />
+    <ClInclude Include="..\public\utils\fst.h" />
+    <ClInclude Include="..\public\utils\mkl_tree.h" />
+    <ClInclude Include="..\public\utils\schnorr.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,0 +1,672 @@
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 0 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:5.34766KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 2
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 0 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 0 ms
+proof with encrypted data size: 107
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 0 ms
+process consumes line:VmPeak:	   30744 kB
+
+30.0234MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 8 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:16.4561KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 6
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 0 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 1 ms
+proof with encrypted data size: 239
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 1 ms
+process consumes line:VmPeak:	   30744 kB
+
+30.0234MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 10 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:39.8789KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 13
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 0 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 0 ms
+proof with encrypted data size: 470
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 0 ms
+process consumes line:VmPeak:	   30744 kB
+
+30.0234MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 15 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:82.4717KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 31
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 0 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 1 ms
+proof with encrypted data size: 1064
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 1 ms
+process consumes line:VmPeak:	   30744 kB
+
+30.0234MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 24 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:152.613KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 58
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 0 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 2 ms
+proof with encrypted data size: 1955
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 2 ms
+process consumes line:VmPeak:	   30744 kB
+
+30.0234MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 41 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:260.206KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 114
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 1 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 4 ms
+proof with encrypted data size: 3803
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 4 ms
+process consumes line:VmPeak:	   30744 kB
+
+30.0234MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 66 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:416.676KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 183
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 1 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 6 ms
+proof with encrypted data size: 6081
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 6 ms
+process consumes line:VmPeak:	   30744 kB
+
+30.0234MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 101 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:634.972KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 278
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 2 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 8 ms
+proof with encrypted data size: 9217
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 8 ms
+process consumes line:VmPeak:	   34844 kB
+
+34.0273MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 151 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:929.566KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 407
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 4 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 11 ms
+proof with encrypted data size: 13474
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 11 ms
+process consumes line:VmPeak:	   34884 kB
+
+34.0664MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 211 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 1 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 1 ms
+crs size:1316.46KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 669
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 6 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 18 ms
+proof with encrypted data size: 22120
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 18 ms
+process consumes line:VmPeak:	   36612 kB
+
+35.7539MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 291 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 1 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 1 ms
+crs size:1813.16KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 922
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 8 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 23 ms
+proof with encrypted data size: 30469
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 23 ms
+process consumes line:VmPeak:	   38796 kB
+
+37.8867MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 390 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 2 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 3 ms
+crs size:2438.72KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 1240
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 12 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 32 ms
+proof with encrypted data size: 40963
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 32 ms
+process consumes line:VmPeak:	   42792 kB
+
+41.7891MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 515 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 2 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 3 ms
+crs size:3213.71KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 1634
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 15 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 39 ms
+proof with encrypted data size: 53965
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 40 ms
+process consumes line:VmPeak:	   58228 kB
+
+56.8633MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 672 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 3 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 4 ms
+crs size:4160.21KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 2341
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 22 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 52 ms
+proof with encrypted data size: 77296
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 53 ms
+process consumes line:VmPeak:	   59988 kB
+
+58.582MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 848 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 4 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 5 ms
+crs size:5301.83KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 2983
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 28 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 64 ms
+proof with encrypted data size: 98482
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 64 ms
+process consumes line:VmPeak:	   64188 kB
+
+62.6836MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1073 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 5 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 6 ms
+crs size:6663.72KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 3750
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 37 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 78 ms
+proof with encrypted data size: 123793
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 79 ms
+process consumes line:VmPeak:	   61820 kB
+
+60.3711MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1326 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 7 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 8 ms
+crs size:8272.54KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 4655
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 45 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 101 ms
+proof with encrypted data size: 153658
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 101 ms
+process consumes line:VmPeak:	   67620 kB
+
+66.0352MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1622 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 8 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 11 ms
+crs size:10156.5KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 5715
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 55 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 120 ms
+proof with encrypted data size: 188638
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 121 ms
+process consumes line:VmPeak:	   78968 kB
+
+77.1172MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1984 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 10 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 12 ms
+crs size:12345.2KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 6946
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 67 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 143 ms
+proof with encrypted data size: 229261
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 143 ms
+process consumes line:VmPeak:	   86984 kB
+
+84.9453MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 2381 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 13 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 14 ms
+crs size:14870KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 8367
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 81 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 179 ms
+proof with encrypted data size: 276154
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 180 ms
+process consumes line:VmPeak:	   98340 kB
+
+96.0352MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 2843 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 15 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 17 ms
+crs size:17763.6KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 11194
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 108 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 228 ms
+proof with encrypted data size: 369445
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 228 ms
+process consumes line:VmPeak:	  112096 kB
+
+109.469MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 3369 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 18 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 20 ms
+crs size:21060.2KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 13272
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 128 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 263 ms
+proof with encrypted data size: 438019
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 264 ms
+process consumes line:VmPeak:	  130728 kB
+
+127.664MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 3986 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 24 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 24 ms
+crs size:24795.7KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 15625
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 153 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 307 ms
+proof with encrypted data size: 515668
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 308 ms
+process consumes line:VmPeak:	  141348 kB
+
+138.035MB memory
+
+=============================
+1 test finished
+sudoku_test: failed
+init mcl in main
+==> void pc::Base::LoadInternal
+void pc::Base::LoadInternal(const string&):104 oops ./pds_pub.bin
+<== void pc::Base::LoadInternal tick: 0 ms
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 4657 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 24 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 27 ms
+crs size:29007.5KB
+==> static bool clink::Pod<Scheme, Policy>::TestCiphertext
+n = 1, s = 18280
+  ==> static void clink::Pod<Scheme, Policy>::EncryptAndProve
+    ==> static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV
+    <== static std::vector<mcl::FpT<mcl::bn::local::FrTag, 256> > clink::Pod<Scheme, Policy>::GenerateV tick: 178 ms
+  <== static void clink::Pod<Scheme, Policy>::EncryptAndProve tick: 359 ms
+proof with encrypted data size: 603283
+oops, serialize check failed
+<== static bool clink::Pod<Scheme, Policy>::TestCiphertext tick: 360 ms
+process consumes line:VmPeak:	  165924 kB
+
+162.035MB memory
+
+=============================
+1 test finished
+sudoku_test: failed

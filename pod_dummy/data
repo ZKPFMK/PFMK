@@ -1,0 +1,630 @@
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 0 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:1.91992KB
+m:9 N:27
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:17.6794ms
+total verify Proof:25.9614ms
+process consumes VmPeak:	   18288 kB
+17.8594MB memory
+proof size: 20.0303KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 0 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:3.25293KB
+m:16 N:48
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:36.4551ms
+total verify Proof:51.2554ms
+process consumes VmPeak:	   18288 kB
+17.8594MB memory
+proof size: 49.8115KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 0 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:4.9668KB
+m:25 N:75
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:86.4346ms
+total verify Proof:116.595ms
+process consumes VmPeak:	   18288 kB
+17.8594MB memory
+proof size: 106.659KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:7.06152KB
+m:36 N:108
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:141.483ms
+total verify Proof:186.152ms
+process consumes VmPeak:	   22384 kB
+21.8594MB memory
+proof size: 204.499KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 1 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:9.53711KB
+m:49 N:147
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:277.883ms
+total verify Proof:284.367ms
+process consumes VmPeak:	   22384 kB
+21.8594MB memory
+proof size: 360.353KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 2 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:12.3936KB
+m:64 N:192
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:407.87ms
+total verify Proof:416.676ms
+process consumes VmPeak:	   26480 kB
+25.8594MB memory
+proof size: 594.318KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 2 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:15.6309KB
+m:81 N:243
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:580.79ms
+total verify Proof:722.572ms
+process consumes VmPeak:	   26480 kB
+25.8594MB memory
+proof size: 929.604KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 3 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:19.249KB
+m:100 N:300
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:811.083ms
+total verify Proof:967.649ms
+process consumes VmPeak:	   34736 kB
+33.9219MB memory
+proof size: 1392.51KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 3 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:23.248KB
+m:121 N:363
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:1107.38ms
+total verify Proof:1282.33ms
+process consumes VmPeak:	   38848 kB
+37.9375MB memory
+proof size: 2012.42KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 4 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:27.6279KB
+m:144 N:432
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:1497.02ms
+total verify Proof:2082.15ms
+process consumes VmPeak:	   42960 kB
+41.9531MB memory
+proof size: 2821.83KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 5 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:32.3887KB
+m:169 N:507
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:1988.48ms
+total verify Proof:2603.29ms
+process consumes VmPeak:	   67632 kB
+66.0469MB memory
+proof size: 3856.3KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 6 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:37.5303KB
+m:196 N:588
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:2968.33ms
+total verify Proof:3219.01ms
+process consumes VmPeak:	   75856 kB
+74.0781MB memory
+proof size: 5154.51KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 6 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:43.0527KB
+m:225 N:675
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:3773.1ms
+total verify Proof:3945.51ms
+process consumes VmPeak:	   84080 kB
+82.1094MB memory
+proof size: 6758.24KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 7 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:48.9561KB
+m:256 N:768
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:4761.22ms
+total verify Proof:4768.78ms
+process consumes VmPeak:	  116976 kB
+114.234MB memory
+proof size: 8712.33KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 8 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:55.2402KB
+m:289 N:867
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:5973.32ms
+total verify Proof:5731.09ms
+process consumes VmPeak:	  129312 kB
+126.281MB memory
+proof size: 11064.7KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 9 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:61.9053KB
+m:324 N:972
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:7426.78ms
+total verify Proof:6848.79ms
+process consumes VmPeak:	  141648 kB
+138.328MB memory
+proof size: 13866.5KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 11 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:68.9512KB
+m:361 N:1083
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:10451.8ms
+total verify Proof:8107.98ms
+process consumes VmPeak:	  195104 kB
+190.531MB memory
+proof size: 17171.8KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 12 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:76.3779KB
+m:400 N:1200
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:12656.3ms
+total verify Proof:9558.76ms
+process consumes VmPeak:	  215664 kB
+210.609MB memory
+proof size: 21037.8KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 13 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:84.1855KB
+m:441 N:1323
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:15302.4ms
+total verify Proof:11182.7ms
+process consumes VmPeak:	  277344 kB
+270.844MB memory
+proof size: 25524.9KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 15 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:92.374KB
+m:484 N:1452
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:18374.1ms
+total verify Proof:13028.5ms
+process consumes VmPeak:	  302016 kB
+294.938MB memory
+proof size: 30696.5KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 16 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:100.943KB
+m:529 N:1587
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:22004.5ms
+total verify Proof:17891.6ms
+process consumes VmPeak:	  380208 kB
+371.297MB memory
+proof size: 36619.1KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 17 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:109.894KB
+m:576 N:1728
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:26229ms
+total verify Proof:20382ms
+process consumes VmPeak:	  413104 kB
+403.422MB memory
+proof size: 43362.3KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 19 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:119.225KB
+m:625 N:1875
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:31253.2ms
+total verify Proof:23132.3ms
+process consumes VmPeak:	  499456 kB
+487.75MB memory
+proof size: 50998.9KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 20 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:128.937KB
+m:676 N:2028
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:37056.6ms
+total verify Proof:26136.9ms
+process consumes VmPeak:	  540576 kB
+527.906MB memory
+proof size: 59604.5KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 22 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:139.029KB
+m:729 N:2187
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:43784.5ms
+total verify Proof:29456.2ms
+process consumes VmPeak:	  659824 kB
+644.359MB memory
+proof size: 69258.2KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 23 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:149.503KB
+m:784 N:2352
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:51584.5ms
+total verify Proof:33119ms
+process consumes VmPeak:	  825332 kB
+805.988MB memory
+proof size: 80041.8KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 25 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:160.357KB
+m:841 N:2523
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:60654.5ms
+total verify Proof:37072.8ms
+process consumes VmPeak:	  881872 kB
+861.203MB memory
+proof size: 92040.6KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 27 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:171.593KB
+m:900 N:2700
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:71020.5ms
+total verify Proof:41452.2ms
+process consumes VmPeak:	 1029904 kB
+1005.77MB memory
+proof size: 105343KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 29 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:183.209KB
+m:961 N:2883
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:82890.7ms
+total verify Proof:46195.6ms
+process consumes VmPeak:	 1151056 kB
+1124.08MB memory
+proof size: 120039KB
+
+init mcl in main
+==> void pc::Base::Create
+<== void pc::Base::Create tick: 31 ms
+==> void pc::Base::SaveInternal
+<== void pc::Base::SaveInternal tick: 0 ms
+Create pc base file success.
+==> void pc::Base::LoadInternal
+<== void pc::Base::LoadInternal tick: 0 ms
+crs size:195.206KB
+m:1024 N:3072
+------------------sk proof---------------------
+sk valid:1
+is hadamard proof valid:1
+is sk proof valid:1
+is cypher proof valid:1
+total Generate Proof:96166.8ms
+total verify Proof:51358ms
+process consumes VmPeak:	 1348048 kB
+1316.45MB memory
+proof size: 136224KB
+

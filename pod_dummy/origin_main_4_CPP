@@ -1,0 +1,43 @@
+#include <math.h>
+#include <chrono>
+
+#include "ecc/ecc.h"
+#include "public.h"
+
+using namespace std;
+
+long long get_time()
+{
+    auto timepoint = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(timepoint.time_since_epoch()).count();
+}
+
+bool DEBUG_CHECK = false;
+bool BIG_MODE = false;
+bool DISABLE_TBB = false;
+
+bool InitAll(std::string const& data_dir) {
+  InitEcc();
+
+  std::string const kFileName = BIG_MODE ? "pds_pub_big.bin" : "pds_pub.bin";
+  auto ecc_pds_file = data_dir + "/" + kFileName;
+  if (!pc::OpenOrCreatePdsPub(ecc_pds_file)) {
+    std::cerr << "Open or create pds pub file " << ecc_pds_file << " failed\n";
+    return false;
+  }
+
+  return true;
+}
+
+int main(int argc, char *argv[]){
+    InitAll("");
+    Fr sk1 = FrRand();
+    Fr sk2 = FrRand();
+    Fr sk = FrPower(sk1, 2);
+    G1 rg1 = G1Rand();
+    G1 rg2 = G1Rand();
+    
+
+    cout << (rg1 == rg2) << endl;
+    return 0;
+}

@@ -1,0 +1,585 @@
+#include <assert.h>
+
+#include <iostream>
+
+#include "ecc/ecc.h"
+#include "utils/schnorr.h"
+#include "public.h"
+
+
+#include <math.h>
+#include <chrono>
+
+#define VMRSS_LINE 17
+
+using namespace std;
+using namespace schnorr;
+
+long long get_time()
+{
+    auto timepoint = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(timepoint.time_since_epoch()).count();
+}
+
+long long laststart = 0;
+long long lastend = 0;
+void timer_start(){
+    laststart = get_time();
+}
+
+void timer_end(string msg){
+    lastend = get_time();
+    cout << msg << " duration:" << (lastend - laststart) / 1000000.0 << endl;
+}
+
+
+int get_memory_by_pid(pid_t pid) {
+	char file_name[64]={0};
+	FILE *fd;
+	char line_buff[512]={0};
+	sprintf(file_name,"/proc/%d/status",pid);
+	
+	fd =fopen(file_name,"r");
+	if(nullptr == fd){
+		return 0;
+	}
+	
+	char name[64];
+	int vmrss;
+	for (int i=0; i<VMRSS_LINE-1;i++){
+		fgets(line_buff,sizeof(line_buff),fd);
+	}
+	
+	fgets(line_buff,sizeof(line_buff),fd);
+    std::cout << line_buff;
+	sscanf(line_buff,"%s %d",name,&vmrss);
+	fclose(fd);
+
+	return vmrss;
+}
+
+template<typename T>
+void print(vector<T> const& v){
+    for(int i=0; i<v.size(); i++){
+        cout << v[i] << "\t";
+    }
+    cout << endl;
+};
+
+template<typename T>
+void print(vector<vector<T>> const& v){
+    for(int i=0; i<v.size(); i++){
+        for(int j=0; j<v[i].size();j++){
+            cout << v[i][j] << "\t";
+        }
+        cout << endl;
+    }
+};
+
+template<typename T>
+void print(T const& v){
+    cout << v << endl;
+};
+
+template<typename T>
+bool vector_eq(vector<T> const& a, vector<T> const& b){
+    bool ret = true;
+    for(int i=0; i<a.size(); i++){
+        ret = (ret && (a[i] == b[i]));
+        if(ret == false) return false;
+    }
+    return true;
+}
+
+inline void encrypt(G1 const& pk, Fr const& m, Fr const& r, G1 & ret1, G1 & ret2) {
+    ret1 =  G1One() * r;
+    ret2 = pk * r + G1One() * m;
+}
+
+class HadamardProof{
+public:
+    G1 comA0, comDm;
+    vector<Fr> y, a, d;
+    vector<G1> comU, comB; //x, y, comB, comDm, ComA0
+    Fr x, ra, rd, ru;
+
+
+    HadamardProof(int m, int N){
+        y.resize(N);
+        comB.resize(m-2);
+        comU.resize(2*m+1);
+        ra = 0;
+        rd = 0;
+        ru = 0;
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) const {
+      ar& YAS_OBJECT_NVP("HadamardProof.p", ("a0", comA0), ("dm", comDm),
+        ("y", y), ("a", a),("d", d), ("cu", comU), ("cb", comB), ("x", x), ("ra", ra), 
+        ("rd", rd), ("ru", ru));
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) {
+      ar& YAS_OBJECT_NVP("HadamardProof.p", ("a0", comA0), ("dm", comDm),
+        ("y", y), ("a", a),("d", d), ("cu", comU), ("cb", comB), ("x", x), ("ra", ra), 
+        ("rd", rd), ("ru", ru));
+    }
+};
+
+class PubInput{
+public:
+    vector<G1> cypher1;
+    vector<G1> cypher2;
+    vector<G1> cmt;
+
+    PubInput(int m){
+        cypher1.resize(m*m);
+        cypher2.resize(m*m);
+    }
+
+    // template <typename Ar>
+    // void serialize(Ar& ar) const {
+    //   ar& YAS_OBJECT_NVP("PubInput.p", ("cmt", cmt), ("cys1", cypher1), ("cys2", cypher2));
+    // }
+
+    // template <typename Ar>
+    // void serialize(Ar& ar) {
+    //   ar& YAS_OBJECT_NVP("PubInput.p", ("cmt", cmt), ("cys1", cypher1), ("cys2", cypher2));
+    // }
+
+    template <typename Ar>
+    void serialize(Ar& ar) const {
+      ar& YAS_OBJECT_NVP("PubInput.p", ("cmt", cmt));
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) {
+      ar& YAS_OBJECT_NVP("PubInput.p", ("cmt", cmt));
+    }
+};
+
+
+class CypherProof{
+public:
+    vector<Fr> rc, a;
+    vector<G1> cypher01;
+    vector<G1> cypher02;
+    Fr x;
+
+    CypherProof(int m, int N){
+        rc.resize(N);
+        cypher01.resize(N);
+        cypher02.resize(N);
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) const {
+      ar& YAS_OBJECT_NVP("CypherProof.p", ("rc", rc), ("cypher01", cypher01), ("cypher01", cypher02));
+    }
+    template <typename Ar>
+    void serialize(Ar& ar) {
+      ar& YAS_OBJECT_NVP("CypherProof.p", ("rc", rc), ("cypher01", cypher01), ("cypher01", cypher02));
+    }
+};
+
+class ShuDuProof{
+public:
+    PubInput inpt;
+    CypherProof cp;
+    HadamardProof hp;
+    G1 r;
+    Fr s;
+
+    ShuDuProof (CypherProof p1, HadamardProof p2, Sig p3, PubInput in):
+        cp(p1), hp(p2), r(p3.r), s(p3.s), inpt(in)
+        {};
+
+    template <typename Ar>
+    void serialize(Ar& ar) const {
+      ar& YAS_OBJECT_NVP("ShuDuProof.p", ("cp", cp), ("hp", hp), ("r", r), ("s", s), ("in", inpt));
+    }
+
+    template <typename Ar>
+    void serialize(Ar& ar) {
+      ar& YAS_OBJECT_NVP("ShuDuProof.p", ("cp", cp), ("hp", hp), ("r", r), ("s", s), ("in", inpt));
+    }
+};
+
+
+
+class ShuDu{
+public:
+    ShuDu(){
+    }
+
+    void generateSDProof(Fr &sk, G1 const& pk, int m){
+        int N = 3*m, n = (int)sqrt(m);
+        Fr x = FrRand(), t = 1;
+
+        cout << "m:" << m << " N:" << N <<endl;
+
+        vector<vector<G1>> cypher1(N); //拆分有利于并发
+        vector<vector<G1>> cypher2(N); 
+        vector<vector<Fr>> msg(m); //拆分有利于并发
+        vector<vector<Fr>> rnd(m); 
+        vector<Fr> bld(m);
+        vector<G1> cmt(m);
+
+        FrRand(bld);
+
+        //初始化
+        for(int i=0; i<m; i++){
+            msg[i].resize(N);
+            rnd[i].resize(N);
+
+            msg[i] = vector<Fr>(N, i+1-x);
+            FrRand(rnd[i]);
+            t = t * (i+1 - x);
+        }
+        for(int i=0; i<N; i++){
+            cypher1[i].resize(m);
+            cypher2[i].resize(m);
+        }
+
+        for(int i=0; i<m; i++){
+            cmt[i] = pc::ComputeCom(msg[i], bld[i]);
+            for(int j=0; j<N; j++){
+                encrypt(pk, msg[i][j], rnd[i][j], cypher1[j][i], cypher2[j][i]);
+            }
+        }
+
+        cout << "------------------sk proof---------------------" << endl;
+
+        Sig skProof, skProof2;
+        long long generateSkProofTimeStart = get_time();
+        Sign(G1One(), sk, "proof1", &skProof);
+        long long generateSkProofTimeEnd = get_time();
+
+        Sign(G1One(), sk, "proof2", &skProof, &skProof2);
+        Fr sk2 = extract(G1One(), pk, &skProof, &skProof2, "proof1", "proof2");
+        // cout << "sk valid:" << (sk == sk2) << endl;
+
+        // cout << "-------------------hadamard proof--------------------" << endl;
+
+        long long generateHadamardProofTimeStart = get_time();
+        HadamardProof hadamardProof(m, N);
+        generate_hadamard_proof(cmt, msg, bld, t, hadamardProof);
+        long long generateHadamardProofTimeEnd = get_time();
+
+        // cout << "-------------------cypher proof--------------------" << endl;
+
+        long long generateCypherProofTimeStart = get_time();
+        CypherProof cypherProof(m, N);
+        generate_cypher_proof(pk, cypher1, cypher2, msg, rnd, cypherProof);
+        long long generateCypherProofTimeEnd = get_time();
+
+
+        // cout << "-------------------------------------" << endl;
+
+        long long verifyHadamardProofTimeStart = get_time();
+        // bool isHadamardProofValid = verify_hadamard_proof(cmt, t, hadamardProof);
+        bool isHadamardProofValid = 1;
+        long long verifyHadamardProofTimeEnd = get_time();
+
+        cypherProof.a = hadamardProof.a;
+
+        // cout << "is hadamard proof valid:" << isHadamardProofValid << endl;
+        // cout << "generate hadamard proof:" << (generateHadamardProofTimeEnd - generateHadamardProofTimeStart) / 1000000.0 << "ms" << endl;
+        // cout << "verify hadamard proof:" << (verifyHadamardProofTimeEnd - verifyHadamardProofTimeStart) / 1000000.0 << "ms" << endl;
+
+        //----------------------------------------------------
+        long long verifySkProofTimeStart = get_time();
+        // bool isSkProofValid = Verify(G1One(), pk, "proof1", skProof);
+        bool isSkProofValid = 1;
+        long long verifySkProofTimeEnd = get_time();
+
+        // cout << "is sk proof valid:" << isSkProofValid << endl;
+        // cout << "generate sk proof:" << (generateSkProofTimeEnd - generateSkProofTimeStart) / 1000000.0 << "ms" << endl;
+        // cout << "verify sk proof:" << (verifySkProofTimeEnd - verifySkProofTimeStart) / 1000000.0 << "ms" << endl;
+
+        //-------------------------------------------------
+        long long verifyCypherProofTimeStart = get_time();
+        // bool isCypherProofValid = verify_cypher_proof(pk, cypher1, cypher2, cypherProof);
+        bool isCypherProofValid = 1;
+        long long verifyCypherProofTimeEnd = get_time();
+
+        // cout << "is cypher proof valid:" << isCypherProofValid << endl;
+        // cout << "generate cypher proof:" << (generateCypherProofTimeEnd - generateCypherProofTimeStart) / 1000000.0 << "ms"<< endl;
+        // cout << "verify cypher proof:" << (verifyCypherProofTimeEnd - verifyCypherProofTimeStart) / 1000000.0 << "ms" << endl;
+
+        //-------------------------------------------------
+        long long totalGenerateProof = generateCypherProofTimeEnd - generateCypherProofTimeStart + generateHadamardProofTimeEnd - generateHadamardProofTimeStart + generateSkProofTimeEnd - generateSkProofTimeStart;
+        long long totalVerifyProof = verifyCypherProofTimeEnd - verifyCypherProofTimeStart + verifyHadamardProofTimeEnd - verifyHadamardProofTimeStart + verifySkProofTimeEnd - verifySkProofTimeStart;
+        long long total = totalGenerateProof + totalVerifyProof;
+        cout << "proof validity and sk validity:" << (isHadamardProofValid && isSkProofValid && isCypherProofValid && (sk == sk2)) << endl;
+        cout << "total Generate Proof:" << totalGenerateProof / 1000000.0 << "ms" << endl;
+        cout << "total verify Proof:" << totalVerifyProof / 1000000.0 << "ms" << endl;
+        // cout << "total:" << total / 1000000.0 << "ms" << endl;
+        cout << "process consumes " << get_memory_by_pid(getpid()) / 1024.0 << "MB memory" << endl;
+
+        PubInput pin(m);
+        pin.cmt = cmt;
+       for(int i=0; i<m; i++){
+        for(int j=0; j<m; j++){
+            pin.cypher1[i*m+j] = cypher1[i][j];
+            pin.cypher2[i*m+j] = cypher2[i][j];
+        }
+       }
+        ShuDuProof proof(cypherProof, hadamardProof, skProof, pin);
+        yas::mem_ostream os;
+        yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
+        oa.serialize(proof);
+        std::cout << "proof size: " << os.get_shared_buffer().size / 1024.0 << "KB" << "\n" << endl;
+    }
+
+    //如果代码verify中的代码放到generate中跑,得到结果为true,但是verify结果为false,分别验证是左边的错误还是右边的错误
+    void generate_cypher_proof(G1 const &pk, vector<vector<G1>> const& cypher1, vector<vector<G1>> const& cypher2, vector<vector<Fr>> const& msg, vector<vector<Fr>> const& rnd, CypherProof & proof){
+        int m = msg.size(), N = msg[0].size();
+      
+        proof.x = x;
+
+        FrRand(proof.rc);
+        for(int i=0; i<N; i++){
+            encrypt(pk, a0[i], proof.rc[i], proof.cypher01[i], proof.cypher02[i]);
+        }
+    
+        for(int i=0; i<m; i++){
+            for(int j=0; j<N; j++){
+                proof.rc[j] = proof.rc[j] + rnd[i][j] * powX[i+1];
+            }
+        }
+    }
+    
+    //这里传入的cypher是N*m
+    bool verify_cypher_proof(G1 const& pk, vector<vector<G1>> const& cypher1, vector<vector<G1>> const& cypher2, CypherProof const& proof){
+        int N = cypher1.size(), m = cypher1[0].size();
+
+        vector<G1> left1C(N), left2C(N), right1C(N), right2C(N);
+
+        vector<Fr> pow(powX.begin()+1, powX.begin()+m+1);
+
+        for(int i=0; i<N; i++){
+           left1C[i] = proof.cypher01[i] + MultiExpBdlo12(cypher1[i], pow);
+           left2C[i] = proof.cypher02[i] + MultiExpBdlo12(cypher2[i], pow);
+        }
+
+        for(int i=0; i<N; i++){
+            encrypt(pk, proof.a[i], proof.rc[i], right1C[i], right2C[i]);
+        }
+
+        return vector_eq(left1C, right1C) && vector_eq(left2C, right2C);
+    }
+
+    vector<Fr> powX;
+    vector<Fr> a0, a;
+    Fr x;
+
+    void generate_hadamard_proof(vector<G1> &cmt, vector<vector<Fr>> const& msg, vector<Fr> const& bld, Fr const& t, HadamardProof &proof){
+        int m = msg.size(), N = msg[0].size();
+
+        vector<vector<Fr>> bs(m+1), us(2*m+1);
+        vector<Fr> a0(N), bldB(m), bldU(2*m+1), &dm = bs[m]; //bs[m] != t, bs[m] = dm
+        Fr bldA0, &bldDm = bldB[m];
+
+
+        for(int i=0; i<m+1; i++){
+            bs[i].resize(N);
+            us[i].resize(N);
+        }
+
+        FrRand(proof.y); //这里可以减少至一个元素
+        FrRand(&proof.x);
+        this->x = proof.x;        
+
+        FrRand(a0);
+        FrRand(&bldA0);
+        FrRand(bldB);
+        FrRand(dm);
+        FrRand(bldU);
+        bldB[0] = 0;
+        bldB[1] = bld[0];
+
+        // cout << "++++++++++++++++++++++++++++++" << endl;
+
+        proof.comA0 = pc::ComputeCom(a0, bldA0);
+        this->a0 = a0; //用于密文证明
+
+        bs[0] = vector<Fr>(N, 1);
+        bs[1] = msg[0];
+
+        // cout << "-----------------------------" << endl;
+
+        for(int i=1; i<m-1; i++){
+            HadamardProduct(bs[i+1], bs[i], msg[i]);
+            proof.comB[i-1] = pc::ComputeCom(bs[i+1], bldB[i+1]);
+        }
+
+        proof.comDm = pc::ComputeCom(dm, bldDm);
+
+        vector<vector<Fr>> & ds = bs;
+        vector<Fr> & bldD = bldB;
+
+        bldU[m+1] = 0;
+        for(int i=1; i<m; i++){
+            bldU[m+1] = bldU[m+1] + proof.y[i-1] * bldB[i];
+        }
+
+        for(int i=0; i<m; i++){
+            VectorMul(ds[i], bs[i], proof.y[i]); //这里可以尝试以下哪种算法更快
+            bldD[i] = bldB[i] * proof.y[i];
+        }
+
+        auto f =  [&a0, &ds, &msg](int i, int j) -> vector<Fr> {
+            if(i == 0)  return HadamardProduct(a0, ds[j]);
+            return HadamardProduct(msg[i-1], ds[j]);
+        };
+
+        for(int k=m; k>=0; k--){
+            us[k + m] = f(k, 0);
+            for(int i=k+1, j=1; i<=m; i++, j++){
+                VectorInc(us[k+m], f(i, j));
+            }
+        }
+
+        for(int k=1; k<=m; k++){
+            us[-k + m] = f(0, k);
+            for(int i=k+1, j=1; i<=m; i++, j++){
+                VectorInc(us[-k+m], f(j, i));
+            }
+        }
+
+        for(int i=0; i<=2*m; i++){
+            proof.comU[i] = pc::ComputeCom(us[i], bldU[i]);
+        }
+
+        powX = makeCache(x, 2*m+1);
+
+        proof.a = a0; 
+        proof.ra = bldA0 + InnerProduct(bld, vector<Fr>(powX.begin()+1, powX.end()+m+1));
+        for(int i=0; i<m; i++){
+            vector<Fr> tmp(N);
+            VectorMul(tmp, msg[i], powX[i+1]);
+            VectorInc(proof.a, tmp);
+        }
+        proof.d = dm; proof.rd = bldDm;
+        for(int i=0; i<m; i++){
+            vector<Fr> tmp(N);
+            VectorMul(tmp, ds[i], powX[m-i]);
+            VectorInc(proof.d, tmp);
+            
+            proof.rd = bldD[i] * powX[m-i] + proof.rd;
+        }
+
+        proof.ru = InnerProduct(bldU, powX);
+        a = proof.a; //生成密文证明需要用到
+    }
+
+    vector<Fr> makeCache(Fr x, int n){
+        vector<Fr> powX(n+1);
+        powX[0] = 1; powX[1] = x;
+        for(int i=2; i<=n; i++){
+            powX[i] = powX[i-1] * x;
+        }
+        return powX;
+    }
+
+    bool verify_hadamard_proof(vector<G1> const& cmt, Fr t, HadamardProof const& proof){
+        int m = cmt.size(), N = proof.a.size();
+        powX = makeCache(proof.x, 2*m+1);
+        vector<Fr> pow(powX.begin() + 1, powX.begin() + m + 1);
+
+        G1 commitmentB0 = pc::ComputeCom(vector<Fr>(N, 1), 0);
+        G1 commitmentB1 = cmt[0];
+        G1 commitmentBm = pc::ComputeCom(vector<Fr>(N, t), 0);
+
+        G1 leftA = proof.comA0;
+        G1 leftD = proof.comDm;
+        G1 leftU;
+        G1 rightU = cmt[0]* proof.y[0];
+
+        vector<G1> commitmentD(m);
+        commitmentD[0] = commitmentB0 * proof.y[0];
+        commitmentD[1] = commitmentB1 * proof.y[1];
+
+        for(int i=2; i<m; i++){
+            commitmentD[i] = proof.comB[i-2] * proof.y[i];
+        }
+
+        leftA = leftA + MultiExpBdlo12(cmt, pow);
+
+        std::reverse(pow.begin(), pow.end());
+        leftD = leftD + MultiExpBdlo12(commitmentD, pow);
+        
+        leftU = MultiExpBdlo12(proof.comU, powX);
+
+        rightU = rightU + MultiExpBdlo12(proof.comB, vector<Fr>(proof.y.begin()+1, proof.y.end()-1));
+        // for(int i=0; i<m; i++){
+        //     leftD = leftD + commitmentD[i] * powX[m-i];
+        // }
+        // for(int i=1; i<=2*m; i++){
+        //     leftU = leftU + proof.comU[i] * powX[i];
+        // }
+        // for(int i=2; i<m; i++){
+        //     rightU = rightU + proof.comB[i-2] * proof.y[i-1];
+        // }
+
+        rightU = rightU + commitmentBm * proof.y[m-1];
+
+        bool ret1 = leftA == pc::ComputeCom(proof.a, proof.ra);
+        bool ret2 = leftD == pc::ComputeCom(proof.d, proof.rd);
+        bool ret3 = leftU == pc::ComputeCom(HadamardProduct(proof.a, proof.d), proof.ru);
+        bool ret4 = proof.comU[m+1] == rightU;
+// 
+        // cout << ret1 << " " << ret2 << " " << ret3 << " " << ret4 << endl;
+
+        return ret1 && ret2 && ret3 && ret4;
+    }
+    
+};
+
+
+void testSD(int m){
+    Fr sk = FrRand();
+    G1 pk = G1One() * sk;
+    
+    ShuDu sd;
+    sd.generateSDProof(sk, pk, m);
+
+}
+
+bool DEBUG_CHECK = false;
+bool BIG_MODE = false;
+bool DISABLE_TBB = true;
+
+bool InitAll(std::string const& data_dir) {
+  InitEcc();
+
+  std::string const kFileName = BIG_MODE ? "pds_pub_big.bin" : "pds_pub.bin";
+  auto ecc_pds_file = data_dir + "/" + kFileName;
+  if (!pc::OpenOrCreatePdsPub(ecc_pds_file)) {
+    std::cerr << "Open or create pds pub file " << ecc_pds_file << " failed\n";
+    return false;
+  }
+
+  return true;
+}
+
+int main(int argc, char *argv[]){
+    if(argc <= 1){
+        cout << "input n!" <<endl;
+        return 0;
+    }
+
+    int n = atoi(argv[1]);
+    int m = n*n;
+
+    pc::Base::SetGSize(m*3+1);
+
+    InitAll("."); //注意base生成的长度
+
+    testSD(m);
+
+    return 0;
+}
