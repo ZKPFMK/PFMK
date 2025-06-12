@@ -18,7 +18,6 @@ std::vector<std::vector<Fr>> relu_A, relu_B, relu_C;
 std::vector<std::vector<Fr>> mimc_A, mimc_B, mimc_C;
 
 struct MLP{
-
     struct Matrix{ //线性层的输入
         std::vector<std::vector<Fr>> matrix;
 
@@ -30,6 +29,21 @@ struct MLP{
 
         size_t m() const{return matrix.size();}
         size_t n() const{return matrix[0].size();}
+
+        bool operator==(Matrix const& right) const {
+            return matrix == right.matrix;
+        }
+        bool operator!=(Matrix const& right) const { return !(*this == right); }
+
+        template <typename Ar>
+        void serialize(Ar& ar) const {
+            ar& YAS_OBJECT_NVP("in.p", ("mt", matrix));
+        }
+
+        template <typename Ar>
+        void serialize(Ar& ar) {
+            ar& YAS_OBJECT_NVP("in.p", ("mt", matrix));
+        }
     };
 
     struct MatrixCommitmentPub { // commitment of
@@ -436,6 +450,23 @@ void MLP::LoadInput(Matrix& input){ //14 * 4
             input.matrix[i][j] = fp::DoubleToRational<D, N>(in[i][j]);
         }
     }
+
+#ifndef DISABLE_SERIALIZE_CHECK
+    // serializeto buffer
+    yas::mem_ostream os;
+    yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
+    oa.serialize(in);
+    std::cout << "input size: " << os.get_shared_buffer().size << "\n";
+    // serialize from buffer
+    yas::mem_istream is(os.get_intrusive_buffer());
+    yas::binary_iarchive<yas::mem_istream, YasBinF()> ia(is);
+    std::vector<std::vector<double>> in2;
+    ia.serialize(in2);
+    if (in != in2) {
+        assert(false);
+        std::cout << "oops, serialize check failed\n";
+    }
+#endif
 }
 
 /**
