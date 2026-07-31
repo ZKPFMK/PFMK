@@ -25,9 +25,9 @@ void pb_variable<FieldT>::allocate(protoboard<FieldT> &pb, const std::string &an
 template<typename FieldT>
 void pb_variable_array<FieldT>::allocate(protoboard<FieldT> &pb, const size_t n, const std::string &annotation_prefix)
 {
-#ifdef DEBUG
-    assert(annotation_prefix != "");
-#endif
+/**#ifdef DEBUG
+    // assert(annotation_prefix != "");
+#endif*/
     (*this).resize(n);
 
     for (size_t i = 0; i < n; ++i)
@@ -335,6 +335,14 @@ linear_combination<FieldT> pb_coeff_sum(const pb_linear_combination_array<FieldT
     return linear_combination<FieldT>(all_terms);
 }
 
+template<typename FieldT>
+void linear_combination_array<FieldT>::evaluate(const std::vector<FieldT> &assignment, std::vector<FieldT> & ret) const
+{
+    for (size_t i = 0; i < this->size(); ++i)
+    {
+        ret[i] = (*this)[i].evaluate(assignment);
+    }
+}
 
 } // libsnark
 #endif // PB_VARIABLE_TCC

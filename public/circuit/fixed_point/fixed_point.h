@@ -1,10 +1,9 @@
 #pragma once
 
-
+#include "./misc.h"
 #include "./max_gadget.h"
 #include "./max2_gadget.h"
 #include "./precision_gadget.h"
-#include "./ip_gadget.h"
 #include "./relu2_gadget.h"
 #include "./relu_gadget.h"
 #include "./sign_gadget.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "./details.h"
-
+// R_{sm}
 // x, y, z: secret Fr
 // open: com(gx,x), com(gy,y), com(gx,z), gx can equal gy
 // prove: z = x*y
@@ -117,6 +117,9 @@ struct A1 {
                     ProveInput const& input,
                     CommitmentSec const& com_sec) {
     Tick tick(__FN__);
+    if(DEBUG_CHECK){
+      CheckInput(input);
+    }
     auto &a = input.a, &b = input.b, &c = input.c;
     auto &r_com_a = com_sec.r_com_a, &r_com_b = com_sec.r_com_b, &r_com_c = com_sec.r_com_c;
 

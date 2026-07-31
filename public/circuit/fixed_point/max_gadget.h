@@ -16,15 +16,16 @@ class MaxGadget : public libsnark::gadget<Fr> {
 
  public:
   MaxGadget(libsnark::protoboard<Fr>& pb,
-            libsnark::pb_linear_combination_array<Fr> const& x,
+            libsnark::linear_combination_array<Fr> const& x,
             const std::string& annotation_prefix = "")
-      : libsnark::gadget<Fr>(pb, annotation_prefix), x_(x), diffs_(x.size()) {
+      : libsnark::gadget<Fr>(pb, annotation_prefix), x_(x) {
     assert(x.size() > 1);
 
     max_.allocate(this->pb, " max");
 
+    // Build diffs_ array
     for (size_t i = 0; i < x_.size(); ++i) {
-      diffs_[i].assign(this->pb, max_ - x_[i]);
+      diffs_.emplace_back(max_ - x_[i]);
     }
 
     sign_gadgets_.resize(x_.size());
@@ -44,10 +45,8 @@ class MaxGadget : public libsnark::gadget<Fr> {
     }
     sum_of_sign = sum_of_sign - Fr(x_.size());
 
-    libsnark::pb_linear_combination<Fr> lc_sum_of_sign;
-    lc_sum_of_sign.assign(this->pb, sum_of_sign);
     this->pb.add_r1cs_constraint(
-        libsnark::r1cs_constraint<Fr>(lc_sum_of_sign, Fr(1), Fr(0)),
+        libsnark::r1cs_constraint<Fr>(sum_of_sign, Fr(1), Fr(0)),
         FMT(this->annotation_prefix, " sum_of_sign = x.size"));
 
     // (diffs_[0]) * (diffs_[1]) == diff_prods_[0]
@@ -68,19 +67,14 @@ class MaxGadget : public libsnark::gadget<Fr> {
   }
 
   void generate_r1cs_witness() {
-    for (size_t i = 0; i < x_.size(); ++i) {
-      x_[i].evaluate(this->pb);
-    }
-    Fr max = this->pb.lc_val(x_[0]);
+    Fr max = x_[0].evaluate(this->pb.full_variable_assignment_ref());
     for (size_t i = 1; i < x_.size(); ++i) {
-      Fr x = this->pb.lc_val(x_[i]);
+      Fr x = x_[i].evaluate(this->pb.full_variable_assignment_ref());
       Fr diff = max - x;
       if (diff.isNegative()) max = x;
     }
 
     this->pb.val(max_) = max;
-
-    diffs_.evaluate(this->pb);
 
     for (size_t i = 0; i < sign_gadgets_.size(); ++i) {
       sign_gadgets_[i]->generate_r1cs_witness();
@@ -88,11 +82,13 @@ class MaxGadget : public libsnark::gadget<Fr> {
 
     // diff_prods_[0] = diffs_[0] * diffs_[1];
     this->pb.val(diff_prods_[0]) =
-        this->pb.lc_val(diffs_[0]) * this->pb.lc_val(diffs_[1]);
+        diffs_[0].evaluate(this->pb.full_variable_assignment_ref()) * 
+        diffs_[1].evaluate(this->pb.full_variable_assignment_ref());
     for (size_t i = 1; i < x_.size() - 1; ++i) {
       // diff_prods_[i] = diff_prods_[i-1] * diffs_[i+1]
       this->pb.val(diff_prods_[i]) =
-          this->pb.val(diff_prods_[i - 1]) * this->pb.lc_val(diffs_[i + 1]);
+          this->pb.val(diff_prods_[i - 1]) * 
+          diffs_[i + 1].evaluate(this->pb.full_variable_assignment_ref());
     }
   }
 
@@ -122,9 +118,9 @@ class MaxGadget : public libsnark::gadget<Fr> {
   }
 
  private:
-  libsnark::pb_linear_combination_array<Fr> x_;
+  libsnark::linear_combination_array<Fr> x_;
   libsnark::pb_variable<Fr> max_;
-  libsnark::pb_linear_combination_array<Fr> diffs_;
+  libsnark::linear_combination_array<Fr> diffs_;
   libsnark::pb_variable_array<Fr> diff_prods_;
   std::vector<std::unique_ptr<SignGadget<D, N>>> sign_gadgets_;
 };

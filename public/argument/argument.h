@@ -7,3 +7,6 @@
 #include "./a5.h"
 #include "./a6.h"
 #include "./a7.h"
+#include "./a10.h"
+#include "./a11.h"
+#include "./a12.h"

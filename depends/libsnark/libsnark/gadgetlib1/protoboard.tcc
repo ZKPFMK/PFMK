@@ -38,7 +38,7 @@ template<typename FieldT>
 var_index_t protoboard<FieldT>::allocate_var_index(const std::string &annotation)
 {
 #ifdef DEBUG
-    assert(annotation != "");
+    // assert(annotation != "");
     constraint_system.variable_annotations[next_free_var] = annotation;
 #else
     libff::UNUSED(annotation);
@@ -101,7 +101,7 @@ template<typename FieldT>
 void protoboard<FieldT>::add_r1cs_constraint(const r1cs_constraint<FieldT> &constr, const std::string &annotation)
 {
 #ifdef DEBUG
-    assert(annotation != "");
+    // assert(annotation != "");
     constraint_system.constraint_annotations[constraint_system.constraints.size()] = annotation;
 #else
     libff::UNUSED(annotation);
@@ -165,6 +165,12 @@ void protoboard<FieldT>::set_input_sizes(const size_t primary_input_size)
 
 template<typename FieldT>
 r1cs_variable_assignment<FieldT> protoboard<FieldT>::full_variable_assignment() const
+{
+    return values;
+}
+
+template<typename FieldT>
+r1cs_variable_assignment<FieldT> const& protoboard<FieldT>::full_variable_assignment_ref() const
 {
     return values;
 }

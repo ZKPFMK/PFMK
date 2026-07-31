@@ -2,7 +2,6 @@
 
 #include "./details.h"
 #include "utils/Elgamal.h"
-#include "argument/a7.h"
 #include "circuit/mimc5_gadget.h"
 
 namespace clink {
@@ -46,36 +45,6 @@ struct Pod {
     }
   };
 
-  struct CommitedData {
-    std::vector<Fr> d;
-    Fr r_com_d;
-    G1  com_d;
-    CommitedData(){}
-    CommitedData(std::vector<Fr> const& d, Fr const& r_com_d, G1 const& com_d)
-      :d(d), r_com_d(r_com_d), com_d(com_d) {
-    }
-  };
-
-  struct MimcProof {
-    std::vector<G1> com_w; // r1cs证据承诺
-    argument::A7::Proof r1cs_proof;
-
-     bool operator==(MimcProof const& b) const {
-      return com_w == b.com_w && r1cs_proof == b.r1cs_proof;
-    }
-
-    bool operator!=(MimcProof const& b) const { return !(*this == b); }
-
-    template <typename Ar>
-    void serialize(Ar& ar) const {
-      ar& YAS_OBJECT_NVP("enc.p", ("w", com_w), ("p", r1cs_proof));
-    }
-
-    template <typename Ar>
-    void serialize(Ar& ar) {
-      ar& YAS_OBJECT_NVP("enc.p", ("w", com_w), ("p", r1cs_proof));
-    }
-  };
 
   struct Secret {
     Fr key;
@@ -108,29 +77,37 @@ struct Pod {
   static void EncryptAndCom(Secret & secret, KeyProof & proof, size_t block_len){
     size_t len = 254, num = len / block_len + (len % block_len == 0 ? 0 : 1);
 
-    Fr k = secret.key;
-    secret.b.resize(len, FrZero());
-    for(int i=0; i<len; i++){
-        if(k.isOdd()){
-          secret.b[i] = 1;
-          k = k - 1; 
-        }
-        k = k / 2;
-        if(k == FrZero()) break;
+    {
+      Tick tick("key to bits");
+      Fr k = secret.key;
+      secret.b.resize(len, FrZero());
+      for(int i=0; i<len; i++){
+          if(k.isOdd()){
+            secret.b[i] = 1;
+            k = k - 1; 
+          }
+          k = k / 2;
+          if(k == FrZero()) break;
+      }
     }
 
-    secret.r_com_b = FrRand();
-    proof.com_b = pc::ComputeCom(secret.b, secret.r_com_b);
-
-    proof.enc_b_block.resize(num);
-    secret.r_enc_b_block.resize(num);
-    secret.b_block = DivideBlock(secret.b, block_len);
-
-    FrRand(secret.r_enc_b_block);
-    for(int i=0; i<num; i++){
-      proof.enc_b_block[i] = ElgamalCipher::Encrypt(pk, secret.b_block[i], secret.r_enc_b_block[i]);
+    {
+      Tick tick("commit b");
+      secret.r_com_b = FrRand();
+      proof.com_b = pc::ComputeCom(secret.b, secret.r_com_b);
     }
-    
+
+    {
+      Tick tick("encrypt b block");
+      proof.enc_b_block.resize(num);
+      secret.r_enc_b_block.resize(num);
+      secret.b_block = DivideBlock(secret.b, block_len);
+
+      FrRand(secret.r_enc_b_block);
+      for(int i=0; i<num; i++){
+        proof.enc_b_block[i] = ElgamalCipher::Encrypt(pk, secret.b_block[i], secret.r_enc_b_block[i]);
+      }
+    }
   }
 
   static void DoKeyProve(h256_t seed, Secret & secret, KeyProof & proof, size_t block_len){
@@ -140,24 +117,30 @@ struct Pod {
     Fr r_com_d = FrRand();
     std::vector<Fr> d(len);
     FrRand(d);
-    proof.com_d = pc::ComputeCom(d, r_com_d);
+
+    {
+      Tick tick("commit d");
+      proof.com_d = pc::ComputeCom(d, r_com_d);
+    }
 
     std::vector<Fr> r_enc_d_block(num);
     std::vector<Fr> d_block = DivideBlock(d, block_len);
     FrRand(r_enc_d_block);
 
-    proof.enc_d_block.resize(num);
-    for(size_t i=0; i<num; i++){
-      proof.enc_d_block[i] = ElgamalCipher::Encrypt(pk, d_block[i], r_enc_d_block[i]);
+    {
+      Tick tick("encrypt d block");
+      proof.enc_d_block.resize(num);
+      for(size_t i=0; i<num; i++){
+        proof.enc_d_block[i] = ElgamalCipher::Encrypt(pk, d_block[i], r_enc_d_block[i]);
+      }
     }
 
     Fr a = 0, pw = 1, r_com_a = FrRand();
     for(size_t i=0; i<len; i++, pw *= 2){
-      a += pw * d[i];
+    a += pw * d[i];
     }
     proof.com_a = secret.g * a + pc::PcH() * r_com_a;
   
-
     std::vector<Fr> t0 = HadamardProduct(d, d);
     std::vector<Fr> t1 = HadamardProduct(d, secret.b * Fr(2)) - d;
     Fr r_com_t0 = FrRand(), r_com_t1 = FrRand();
@@ -182,10 +165,9 @@ struct Pod {
     DoKeyProve(seed, secret, proof, block_len);
   }
 
-  static bool KeyVerify(h256_t seed, size_t n, G1 const& com_k, KeyProof const& proof, size_t block_len){
+  static bool KeyVerify(h256_t seed, G1 const& com_k, KeyProof const& proof, size_t block_len){
     Tick tick(__FN__);
     size_t len = 254;
-    G1 g = pc::ComputeSigmaG(0, n);
 
     UpdateSeed(seed, proof.com_t0, proof.com_t1, proof.com_a);
     Fr e = H256ToFr(seed);
@@ -199,7 +181,7 @@ struct Pod {
     for(size_t i=0; i<len; i++, pw*=2){
       u += pw * proof.z[i];
     }
-    ret &= (proof.com_a + com_k * e == g * u + pc::PcH() * proof.r_com_u);
+    ret &= (proof.com_a + com_k * e == pc::kGetRefG1(0) * u + pc::PcH() * proof.r_com_u);
 
     std::vector<Fr> z_block = DivideBlock(proof.z, block_len);
     for(size_t i=0; i<proof.enc_d_block.size(); i++){
@@ -208,200 +190,92 @@ struct Pod {
     return ret;
   }
 
-  static void EncryptAndProve(MimcProof & proof, h256_t seed,
-                              Secret & secret,
-                              CommitedData & commited_cipher,
-                              CommitedData const& commited_data) {
-    Tick _tick_(__FN__);
-    auto n = commited_data.d.size();
-    
-    secret.key = FrRand();
-    std::vector<Fr> plain(n); //ctr_i = Hash(nonce || i), 计数器
-    ComputeFst(seed, "pod::nonce", plain);
-    
-    std::vector<G1> com_w;
-    std::vector<std::vector<Fr>> w, a, b, c;
-    std::vector<Fr> r_com_w, r_com_a, r_com_b, r_com_c;
-    
-    ComputeMimcWitness(plain, secret.key, w);
-    ComputeMimcWitCom(w, r_com_w, com_w);
-    UpdateSeed(seed, com_w);
-    ComputeWitness(w, mimc_a, mimc_b, mimc_c, a, b, c, r_com_w, r_com_a, r_com_b, r_com_c);
-    
-    argument::A7::CommitmentSec sec(r_com_a, r_com_b, r_com_c);
-    argument::A7::ProveInput input(a, b, c, pc::kGetRefG1);
-    argument::A7::Prove(proof.r1cs_proof, seed, input, sec);
+  static bool TestKey(int64_t block_len);
+};  // struct Pod
 
-    secret.r_com_key = r_com_w[2];
-    secret.com_key = com_w[2];
-    secret.g = com_w[0];
-    
-    commited_cipher.r_com_d = r_com_w.back();
-    commited_cipher.com_d = com_w.back();
-    commited_cipher.d = w.back();
-
-    proof.com_w = com_w;
-  }
-
-  static bool VerifyAndBuy(MimcProof const& proof, h256_t seed, int64_t n) {
-    Tick _tick_(__FN__);
-
-    std::vector<Fr> plain(n); //ctr_i = Hash(nonce || i), 计数器
-    ComputeFst(seed, "pod::nonce", plain);
-    UpdateSeed(seed, proof.com_w);
-
-    if (proof.com_w[0] != pc::ComputeSigmaG(0, n)) {
-      assert(false);
-      return false;
-    }
-
-    if (proof.com_w[1] != pc::ComputeCom(plain, 0)) {
-      assert(false);
-      return false;
-    }
-
-    return argument::A7::Verify(n, proof.r1cs_proof, seed, mimc_a, mimc_b, mimc_c, proof.com_w, pc::kGetRefG1);
-  }
-
-  static std::vector<Fr> GenerateV(std::vector<Fr> const& plain, Fr const& key) {
-    Tick _tick_(__FN__);
-    std::vector<Fr> v(plain.size());
-    auto parallel_f = [&v, &plain, &key](uint64_t i) {
-      v[i] = circuit::Mimc5Enc(plain[i], key);
-    };
-    parallel::For(v.size(), parallel_f);
-    return v;
-  }
-
-  static bool Test(int64_t n, int64_t block_len);
-
-  static bool CheckCommitedData(CommitedData const& data) {
-    if (!data.d.size() > pc::Base::GSize()) return false;
-    return pc::ComputeCom(data.d, data.r_com_d) == data.com_d;
-  }
-
-  static void ComputeMimcWitness(std::vector<Fr> const& plain, Fr key, std::vector<std::vector<Fr>> & w){
-    Tick tick(__FN__);
-
-    libsnark::protoboard<Fr> pb;
-    circuit::Mimc5Gadget mimc_gadget(pb, "Mimc5Gadget");
-
-    size_t m = pb.num_variables(), n = plain.size();
-
-    w.resize(m+1, std::vector<Fr>(n));
-    
-    auto parallel_f = [&plain, &key, &w](size_t i){
-      libsnark::protoboard<Fr> pb; 
-      circuit::Mimc5Gadget gadget(pb, "Mimc5Gadget");
-      gadget.Assign(plain[i], key);
-      CopyRowToLine(w, pb.full_variable_assignment(), i, true);
-    };
-    parallel::For(n, parallel_f);
-  }
-
-  static void ComputeMimcWitCom(std::vector<std::vector<Fr>> const& w,
-                                std::vector<Fr> & r_com_w,
-                                std::vector<G1> & com_w){
-    com_w.resize(w.size()); //0为常量, 1为plain, 2为key
-    r_com_w.resize(w.size(), FrZero());
-    
-    com_w[0] = pc::ComputeSigmaG(0, w[0].size());
-    com_w[1] = pc::ComputeCom(w[1], FrZero());
-
-    r_com_w[2] = FrRand();
-    com_w[2] =  com_w[0] * w[2][0] + pc::PcH() * r_com_w[2];
-
-    auto parallel_f = [&w, &com_w, &r_com_w](int64_t i) {
-      if(i == 0 || i == 1 || i == 2){
-        return;
-      }else{
-        r_com_w[i] = FrRand();
-        com_w[i] = pc::ComputeCom(w[i], r_com_w[i]);
-      }
-    };
-    parallel::For(w.size(), parallel_f);
-  }
-};
-
-bool Pod::Test(int64_t n, int64_t block_len) {
+inline bool Pod::TestKey(int64_t block_len) {
   Tick tick(__FN__);
 
-  CommitedData commited_data;
-  commited_data.r_com_d = FrRand();
-  commited_data.d.resize(n);
-  FrRand(commited_data.d);
-  commited_data.com_d = pc::ComputeCom(commited_data.d, commited_data.r_com_d);
-
   h256_t seed = misc::RandH256();
+
+  {
+    Tick tick("init keys");
+    clink::sk_sel = Fr("1947813665846030422559828600490533160609795549654730157211166665690478441119");
+    clink::sk_buy = Fr("19909940428476593807986756695020318192734285490982501092727296391197763088211");
+    clink::sk = clink::sk_sel + clink::sk_buy;
+    clink::pk_sel = pc::kGetRefG1(0) * clink::sk_sel;
+    clink::pk_buy = pc::kGetRefG1(0) * clink::sk_buy;
+    clink::pk = clink::pk_sel + clink::pk_buy;
+  }
 
   // prove
   Secret secret;
   KeyProof key_proof;
-  MimcProof enc_proof;
-  CommitedData commited_cph;
 
-  EncryptAndProve(enc_proof, seed, secret, commited_cph, commited_data);
-  KeyProve(key_proof, seed, secret, block_len);
+  {
+    Tick tick("encrypt and commit");
+    secret.key = sk;
+    secret.r_com_key = FrRand();
+    secret.g = pc::kGetRefG1(0);
+    secret.com_key = pc::ComputeCom(secret.g, secret.key, secret.r_com_key);
+  }
 
-  // prover send prove_output.proved_data to verifier
-#ifndef DISABLE_SERIALIZE_CHECK
-  // serialize to buffer
-    {
-      yas::mem_ostream os;
-      yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-      oa.serialize(enc_proof);
-      std::cout << "enc proof size: " << os.get_shared_buffer().size << "\n";
-      yas::mem_istream is(os.get_intrusive_buffer());
-      yas::binary_iarchive<yas::mem_istream, YasBinF()> ia(is);
-      MimcProof proof2;
-      ia.serialize(proof2);
-      if (enc_proof != proof2) {
-        assert(false);
-        std::cout << "oops, serialize check failed\n";
-        return false;
-      }
-    }
+  double seller_time_ms = 0;
+  double verify_time_ms = 0;
+  double decrypt_time_ms = 0;
 
-    {
-      yas::mem_ostream os;
-      yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-      oa.serialize(key_proof);
-      std::cout << "key proof size: " << os.get_shared_buffer().size
-                << "\n";
-      yas::mem_istream is(os.get_intrusive_buffer());
-      yas::binary_iarchive<yas::mem_istream, YasBinF()> ia(is);
-      KeyProof proof2;
-      ia.serialize(proof2);
-      if (key_proof != proof2) {
-        assert(false);
-        std::cout << "oops, serialize check failed\n";
-        return false;
-      }
-    } 
-#endif
+  {
+    auto start = std::chrono::high_resolution_clock::now();
+    Tick tick("prove time");
+    KeyProve(key_proof, seed, secret, block_len);
+    auto end = std::chrono::high_resolution_clock::now();
+    seller_time_ms = std::chrono::duration<double, std::milli>(end - start).count();
+  }
 
-  if (!VerifyAndBuy(enc_proof, seed, n)) {
-    assert(false);
-    return false;
+  // print proof size using serialization
+  {
+    yas::mem_ostream os;
+    yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
+    oa & key_proof;
+    size_t proof_size = os.get_intrusive_buffer().size;
+    std::cout << "=== Proof Size ===" << std::endl;
+    std::cout << "Total proof size (bytes): " << proof_size << std::endl;
+    std::cout << "==================" << std::endl;
   }
 
   {
-    Tick tick("client time");
-    if(!KeyVerify(seed, n, secret.com_key, key_proof, block_len)){
+    auto start = std::chrono::high_resolution_clock::now();
+    Tick tick("verify time");
+    if(!KeyVerify(seed, secret.com_key, key_proof, block_len)){
       assert(false);
       return false;
     }
-
-    {
-      Tick tick("decrypt time");
-      Fr pow = 1, decrypt_key = 0;
-      for(size_t i=0; i<key_proof.enc_b_block.size(); i++){
-        decrypt_key += ElgamalCipher::Decrypt(sk, key_proof.enc_b_block[i], block_len) * pow;
-        pow *= (1 << block_len);
-      }
-      CHECK(decrypt_key == secret.key, "");
-    }
+    auto end = std::chrono::high_resolution_clock::now();
+    verify_time_ms = std::chrono::duration<double, std::milli>(end - start).count();
   }
+
+  {
+    auto start = std::chrono::high_resolution_clock::now();
+    Tick tick("decrypt time");
+    Fr pow = 1, decrypt_key = 0;
+    for(size_t i=0; i<key_proof.enc_b_block.size(); i++){
+      decrypt_key += ElgamalCipher::Decrypt(sk, key_proof.enc_b_block[i], block_len) * pow;
+      pow *= (1 << block_len);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    decrypt_time_ms = std::chrono::duration<double, std::milli>(end - start).count();
+    CHECK(decrypt_key == secret.key, "");
+    std::cout << "correct key!" << std::endl;
+  }
+
+  double buyer_time_ms = verify_time_ms + decrypt_time_ms;
+
+  std::cout << "=== Time Summary ===" << std::endl;
+  std::cout << "seller_time: " << seller_time_ms << " ms" << std::endl;
+  std::cout << "buyer_time: " << buyer_time_ms << " ms" << std::endl;
+  std::cout << "  (verify: " << verify_time_ms << " ms, decrypt: " << decrypt_time_ms << " ms)" << std::endl;
+  std::cout << "====================" << std::endl;
+
   return true;
 }
 

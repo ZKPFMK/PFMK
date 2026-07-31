@@ -11,9 +11,9 @@ typedef _W64 __int32 ssize_t;
 
 #if defined(_MSC_VER)
 #define __noinline__ __declspec(noinline)
-#else
-#define __noinline__ __attribute__((noinline))	
 #endif // _MSC_VER
+// Note: For GCC/Clang, __noinline__ is a built-in attribute, no need to redefine
+// Redefining it causes conflicts with Boost's BOOST_NOINLINE macro
 
 #ifdef _MSC_VER
 #include <intrin.h>

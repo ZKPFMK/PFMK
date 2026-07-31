@@ -15,8 +15,8 @@ class ReluGadget : public libsnark::gadget<Fr> {
 
  public:
   ReluGadget(libsnark::protoboard<Fr>& pb,
-             libsnark::pb_linear_combination<Fr> const& a,
-             libsnark::pb_linear_combination<Fr> const* sign = nullptr,
+             libsnark::linear_combination<Fr> const& a,
+             libsnark::linear_combination<Fr> const* sign = nullptr,
              const std::string& annotation_prefix = "")
       : libsnark::gadget<Fr>(pb, annotation_prefix), a_(a) {
     if (sign) {
@@ -42,12 +42,10 @@ class ReluGadget : public libsnark::gadget<Fr> {
   void generate_r1cs_witness() {
     if (sign_gadget_) {
       sign_gadget_->generate_r1cs_witness();
-    } else {
-      sign_.evaluate(this->pb);
     }
 
-    auto a = this->pb.lc_val(a_);
-    auto sign = this->pb.lc_val(sign_);
+    auto a = a_.evaluate(this->pb.full_variable_assignment_ref());
+    auto sign = sign_.evaluate(this->pb.full_variable_assignment_ref());
     assert(sign == (a.isNegative() ? Fr(0) : Fr(1)));
     this->pb.val(ret_) = sign == Fr(0) ? Fr(0) : a;
   }
@@ -60,12 +58,12 @@ class ReluGadget : public libsnark::gadget<Fr> {
     libsnark::pb_variable<Fr> pb_x;
     pb_x.allocate(pb, "Test x");
     libsnark::pb_variable<Fr> pb_sign;
-    libsnark::pb_linear_combination<Fr> pb_lc_sign;
+    libsnark::linear_combination<Fr> lc_sign;
 
     if (set_sign) {
       pb_sign.allocate(pb, "Test sign");
-      pb_lc_sign.assign(pb, pb_sign);
-      gadget = std::make_unique<ReluGadget<D, N>>(pb, pb_x, &pb_lc_sign,
+      lc_sign = pb_sign;
+      gadget = std::make_unique<ReluGadget<D, N>>(pb, pb_x, &lc_sign,
                                                   "ReluGadget");
     } else {
       gadget =
@@ -76,7 +74,6 @@ class ReluGadget : public libsnark::gadget<Fr> {
     pb.val(pb_x) = x;
     if (set_sign) {
       pb.val(pb_sign) = x.isNegative() ? 0 : 1;
-      pb_lc_sign.evaluate(pb);
     }
 
     gadget->generate_r1cs_witness();
@@ -85,9 +82,9 @@ class ReluGadget : public libsnark::gadget<Fr> {
   }
 
  private:
-  libsnark::pb_linear_combination<Fr> a_;
+  libsnark::linear_combination<Fr> a_;
   std::unique_ptr<SignGadget<D, N>> sign_gadget_;
-  libsnark::pb_linear_combination<Fr> sign_;
+  libsnark::linear_combination<Fr> sign_;
   libsnark::pb_variable<Fr> ret_;
 };
 

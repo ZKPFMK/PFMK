@@ -15,14 +15,15 @@ class SignGadget : public libsnark::gadget<Fr> {
 
  public:
   SignGadget(libsnark::protoboard<Fr>& pb,
-             libsnark::pb_linear_combination<Fr> const& a,
+             libsnark::linear_combination<Fr> const& a,
              const std::string& annotation_prefix = "")
-      : libsnark::gadget<Fr>(pb, annotation_prefix), a_(a) {
-    a_off_.assign(this->pb, a_ + RationalConst<D, N>().kFrDN);
+      : libsnark::gadget<Fr>(pb, annotation_prefix), a_(a),
+        a_off_(a_ + RationalConst<D, N>().kFrDN) {
     // 2kFrDN > a_ + kFrDN >=0, so use D+N+1 bits
     bits_.allocate(this->pb, D + N + 1, FMT(this->annotation_prefix, " bits"));
+    a_off_pb_.assign(this->pb, a_off_);
     packing_gadget_.reset(new libsnark::packing_gadget<Fr>(
-        this->pb, bits_, a_off_, FMT(this->annotation_prefix, " packing")));
+        this->pb, bits_, a_off_pb_, FMT(this->annotation_prefix, " packing")));
   }
 
   void generate_r1cs_constraints() {
@@ -30,12 +31,10 @@ class SignGadget : public libsnark::gadget<Fr> {
   }
 
   void generate_r1cs_witness() {
-    a_.evaluate(this->pb);
-    a_off_.evaluate(this->pb);
-
     packing_gadget_->generate_r1cs_witness_from_packed();
 
-    if (this->pb.lc_val(a_).isNegative()) {
+    Fr a_val = a_.evaluate(this->pb.full_variable_assignment_ref());
+    if (a_val.isNegative()) {
       assert(this->pb.val(ret()) == 0);
     } else {
       assert(this->pb.val(ret()) == 1);
@@ -57,8 +56,9 @@ class SignGadget : public libsnark::gadget<Fr> {
   }
 
  private:
-  libsnark::pb_linear_combination<Fr> a_;
-  libsnark::pb_linear_combination<Fr> a_off_;
+  libsnark::linear_combination<Fr> a_;
+  libsnark::linear_combination<Fr> a_off_;
+  libsnark::pb_linear_combination<Fr> a_off_pb_;
   std::unique_ptr<libsnark::packing_gadget<Fr>> packing_gadget_;
   libsnark::pb_variable_array<Fr> bits_; //低位到高位
 };

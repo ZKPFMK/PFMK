@@ -90,6 +90,38 @@ public:
 };
 
 template<typename FieldT>
+class linear_combination_array : private std::vector<linear_combination<FieldT> >
+{
+    typedef std::vector<linear_combination<FieldT> > contents;
+public:
+    using typename contents::iterator;
+    using typename contents::const_iterator;
+    using typename contents::reverse_iterator;
+    using typename contents::const_reverse_iterator;
+
+    using contents::begin;
+    using contents::end;
+    using contents::rbegin;
+    using contents::rend;
+    using contents::emplace_back;
+    using contents::insert;
+    using contents::reserve;
+    using contents::size;
+    using contents::empty;
+    using contents::operator[];
+    using contents::resize;
+
+    linear_combination_array() : contents() {};
+    linear_combination_array(const pb_variable_array<FieldT> &arr) { for (auto &v : arr) this->emplace_back(linear_combination<FieldT>(v)); };
+    linear_combination_array(size_t count) : contents(count) {};
+    linear_combination_array(size_t count, const linear_combination<FieldT> &value) : contents(count, value) {};
+    linear_combination_array(typename contents::const_iterator first, typename contents::const_iterator last) : contents(first, last) {};
+    linear_combination_array(typename contents::const_reverse_iterator first, typename contents::const_reverse_iterator last) : contents(first, last) {};
+
+    void evaluate(const std::vector<FieldT> &assignment, std::vector<FieldT> & ret) const;
+};
+
+template<typename FieldT>
 class pb_linear_combination_array : private std::vector<pb_linear_combination<FieldT> >
 {
     typedef std::vector<pb_linear_combination<FieldT> > contents;

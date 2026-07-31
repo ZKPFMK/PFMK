@@ -3,6 +3,8 @@
 #include "./details.h"
 #include "./a4.h"
 
+
+// R_{cp}^{A}
 // a_i: public vector<Fr>, i\in[0,m-1], a_i.size() maybe neq a_j.size()
 // b_i: secret vector<Fr>, i\in[0,m-1], x_i.size() maybe neq x_j.size()
 // c_i: secret Fr
@@ -156,8 +158,8 @@ struct A5 {
                            CommitmentSec const& com_sec){
     CheckInput(input);
     for(size_t i=0; i<input.m(); i++){
-      assert(pc::ComputeCom(input.get_ga, input.a[i], com_sec.r_com_a[i]) == com_pub.com_a[i]);
-      assert(pc::ComputeCom(input.gc, input.c[i], com_sec.r_com_c[i]) == com_pub.com_c[i]);
+      CHECK(pc::ComputeCom(input.get_ga, input.a[i], com_sec.r_com_a[i]) == com_pub.com_a[i], std::to_string(i));
+      CHECK(pc::ComputeCom(input.gc, input.c[i], com_sec.r_com_c[i]) == com_pub.com_c[i], std::to_string(i));
     }
   }
   

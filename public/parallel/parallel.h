@@ -21,6 +21,21 @@
 #include <utility>
 #include <vector>
 
+// Detect TBB version:
+// - oneTBB 2021+ has TBB_INTERFACE_VERSION >= 12000
+// - tbb::task_scheduler_handle existed briefly but was removed in later oneTBB
+// - Old TBB uses tbb::task_scheduler_init
+// We check for __TBB_SUPPORTS_TASK_SCHEDULER_HANDLE or try to detect availability
+#if TBB_INTERFACE_VERSION >= 12000
+  #define PFMK_USE_NEW_TBB 1
+  // Check if task_scheduler_handle is available (it was removed in some oneTBB versions)
+  // Use global_control instead, which is the recommended modern approach
+  #include <tbb/global_control.h>
+#else
+  #define PFMK_USE_NEW_TBB 0
+  #include <tbb/task_scheduler_init.h>
+#endif
+
 extern bool DISABLE_TBB;
 
 namespace parallel {
@@ -57,14 +72,41 @@ inline void CheckAllocationHook() {
 
 inline static int tbb_thread_num = 1;
 
-inline std::unique_ptr<tbb::task_scheduler_init> InitTbb(int thread_num) {
+// Type alias for TBB scheduler handle (version-dependent)
+#if PFMK_USE_NEW_TBB
+  using TbbSchedulerHandle = tbb::global_control;
+#else
+  using TbbSchedulerHandle = tbb::task_scheduler_init;
+#endif
+
+// Compatibility wrapper for TBB task scheduler initialization
+// Works with both old TBB (task_scheduler_init) and new oneAPI TBB (global_control)
+inline std::unique_ptr<TbbSchedulerHandle> InitTbb(int thread_num) {
   CheckAllocationHook();
 
-  thread_num =
-      thread_num > 0 ? thread_num : tbb::task_scheduler_init::automatic;
-  auto init = std::make_unique<tbb::task_scheduler_init>(thread_num);
-  tbb_thread_num = thread_num > 0 ? thread_num : init->default_num_threads();
-  return init;
+#if PFMK_USE_NEW_TBB
+  std::unique_ptr<TbbSchedulerHandle> handle;
+  if (thread_num > 0) {
+    handle = std::unique_ptr<TbbSchedulerHandle>(
+        new TbbSchedulerHandle(
+            tbb::global_control::max_allowed_parallelism, thread_num));
+    tbb_thread_num = thread_num;
+  } else {
+    tbb_thread_num = tbb::this_task_arena::max_concurrency();
+  }
+#else
+  std::unique_ptr<TbbSchedulerHandle> handle;
+  if (thread_num > 0) {
+    handle = std::unique_ptr<TbbSchedulerHandle>(
+        new TbbSchedulerHandle(thread_num));
+    tbb_thread_num = thread_num;
+  } else {
+    handle = std::unique_ptr<TbbSchedulerHandle>(
+        new TbbSchedulerHandle());
+    tbb_thread_num = tbb::task_scheduler_init::default_num_threads();
+  }
+#endif
+  return handle;
 }
 
 typedef std::function<void()> Task;

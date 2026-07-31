@@ -1,7 +1,10 @@
 #pragma once
 
-#include "../fixed_point/fixed_point.h"
-#include "../fixed_point/onehot_gadget.h"
+#include "../basic/circuit.h"
+
+// 在进入 circuit::frozenlake 命名空间之前 include onehot_gadget.h
+// 这样 onehot_gadget 会在 circuit 命名空间中正确定义
+#include "../basic/onehot_gadget.h"
 
 namespace circuit::frozenlake {
 
@@ -21,99 +24,78 @@ namespace circuit::frozenlake {
  *  合法状态:
  *      最终状态的one-hot中所有陷阱的位置和为0
  * 
+ * 注意：此 gadget 使用整数运算，不涉及定点数
  */
 
 class EnvGadget : public libsnark::gadget<Fr> {
- typedef circuit::fixed_point::OnehotGadget<8, 24> OnehotGadget;
-  public:
-  EnvGadget(libsnark::protoboard<Fr>& pb, 
+ public:
+  /**
+   * 构造函数：接受外部传入的状态和动作变量
+   * @param pb protoboard
+   * @param in_state 外部传入的状态 one-hot 向量变量
+   * @param action 外部传入的动作 one-hot 向量变量
+   * @param in_state_pack 外部传入的打包状态变量
+   * @param annotation_prefix 注释前缀
+   */
+  EnvGadget(libsnark::protoboard<Fr>& pb,
+            libsnark::pb_variable_array<Fr> const& in_state,
+            libsnark::pb_variable_array<Fr> const& action,
+            libsnark::pb_variable<Fr> const& in_state_pack,
             const std::string& annotation_prefix = "")
-      : libsnark::gadget<Fr>(pb, annotation_prefix) {
-    in_state.allocate(this->pb, n_state,
-                   FMT(this->annotation_prefix, " in_state"));
-    
-    action.allocate(this->pb, n_action,
-                   FMT(this->annotation_prefix, " action"));
+      : libsnark::gadget<Fr>(pb, annotation_prefix),
+        in_state_(in_state),
+        action_(action),
+        in_state_pack_(in_state_pack) {
+    out_state_pack_.allocate(this->pb,
+                             FMT(this->annotation_prefix, " out_state_pack"));
 
-    in_state_pack.allocate(this->pb,
-                   FMT(this->annotation_prefix, " in_state_pack"));
-
-    out_state.allocate(this->pb, n_state,
-                   FMT(this->annotation_prefix, " out_state"));
-
-    out_state_pack.allocate(this->pb, 
-                   FMT(this->annotation_prefix, " out_state_pack"));  
-
-    prod.allocate(this->pb, n_action,
+    prod_.allocate(this->pb, n_action,
                    FMT(this->annotation_prefix, " action_flag"));
 
-    in_onehot_gadget.reset(new OnehotGadget(
-        this->pb, in_state, in_state_pack, FMT(this->annotation_prefix, " in_packing")));
-
-    out_onehot_gadget.reset(new OnehotGadget(
-        this->pb, out_state, out_state_pack, FMT(this->annotation_prefix, " out_packing")));
+    // out_onehot_gadget: 从 out_state_pack_ 生成 one-hot bits
+    out_onehot_gadget_.reset(new ::circuit::onehot_gadget(
+        this->pb, out_state_pack_, n_state, FMT(this->annotation_prefix, " out_onehot")));
     generate_r1cs_constraints();
   }
 
-  void Assign(std::vector<Fr> const& state, std::vector<Fr> const& action) {
-    assert(state.size() == n_state && action.size() == n_action);
-
-    for(int i=0; i<state.size(); i++){
-        this->pb.val(in_state[i]) = state[i];
-    }
-    for(int i=0; i<action.size(); i++){
-        this->pb.val(this->action[i]) = action[i];
-    }
+  /**
+   * 赋值函数：外部变量已由调用者赋值，计算输出
+   */
+  void AssignFromExternal() {
     generate_r1cs_witness();
-  };
-
-  libsnark::pb_variable<Fr> ret(){
-    return out_state_pack;
   }
 
-  libsnark::pb_variable<Fr> in(){
-    return in_state_pack;
+  libsnark::pb_variable<Fr> ret() {
+    return out_state_pack_;
   }
 
-  static bool Test(std::vector<Fr> const& state, std::vector<Fr> const& action, Fr fin_state){
-    libsnark::protoboard<Fr> pb;
-    EnvGadget gadget(pb,  "EnvGadget");
-    std::cout << Tick::GetIndentString()
-              << "num_constraints: " << pb.num_constraints()
-              << ", num_variables: " << pb.num_variables() << "\n";
-
-    gadget.Assign(state, action);
-
-    return pb.is_satisfied() && pb.val(gadget.out_state_pack) == fin_state;
-  };
+  libsnark::pb_variable<Fr> in() {
+    return in_state_pack_;
+  }
 
  private:
   void generate_r1cs_constraints() {
-    namespace fp = circuit::fp;
-    fp::RationalConst<8, 24> rationalConst;
-
-    in_onehot_gadget->generate_r1cs_constraints(true);
-    out_onehot_gadget->generate_r1cs_constraints(true);
+    // onehot_gadget generates constraints in its constructor, no need to call generate_r1cs_constraints
 
     // 是否可以向该方向移动
-    libsnark::linear_combination<Fr> move = in_state_pack;
-    libsnark::linear_combination<Fr> sign_top = rationalConst.kFrN;
-    libsnark::linear_combination<Fr> sign_down = rationalConst.kFrN;
-    libsnark::linear_combination<Fr> sign_left = rationalConst.kFrN;
-    libsnark::linear_combination<Fr> sign_right = rationalConst.kFrN;
+    libsnark::linear_combination<Fr> move = in_state_pack_;
+    libsnark::linear_combination<Fr> sign_top = 1;
+    libsnark::linear_combination<Fr> sign_down = 1;
+    libsnark::linear_combination<Fr> sign_left = 1;
+    libsnark::linear_combination<Fr> sign_right = 1;
     libsnark::linear_combination<Fr> sign_trap;
 
     int l = (int)std::sqrt(n_state);
-    for (size_t i = 0; i < l; ++i) {
-        sign_top = sign_top - in_state[i];
-        sign_down = sign_down - in_state[n_state - l + i];
-        sign_left = sign_left - in_state[i * l];
-        sign_right = sign_right - in_state[(i+1) * l - 1];
+    for (size_t i = 0; i < (size_t)l; ++i) {
+      sign_top = sign_top - in_state_[i];
+      sign_down = sign_down - in_state_[n_state - l + i];
+      sign_left = sign_left - in_state_[i * l];
+      sign_right = sign_right - in_state_[(i + 1) * l - 1];
     }
 
     // 是否处于陷阱
-    for(int i=0; i<trap.size(); i++){
-        sign_trap = sign_trap + out_state[trap[i]];
+    for (size_t i = 0; i < trap_.size(); ++i) {
+      sign_trap = sign_trap + out_onehot_gadget_->bits[trap_[i]];
     }
 
     libsnark::pb_linear_combination<Fr> lc_sign_top;
@@ -121,7 +103,7 @@ class EnvGadget : public libsnark::gadget<Fr> {
     libsnark::pb_linear_combination<Fr> lc_sign_left;
     libsnark::pb_linear_combination<Fr> lc_sign_right;
     libsnark::pb_linear_combination<Fr> lc_sign_trap;
-    
+
     lc_sign_top.assign(this->pb, sign_top);
     lc_sign_down.assign(this->pb, sign_down);
     lc_sign_left.assign(this->pb, sign_left);
@@ -130,158 +112,96 @@ class EnvGadget : public libsnark::gadget<Fr> {
 
     this->pb.add_r1cs_constraint(
         libsnark::r1cs_constraint<Fr>(lc_sign_trap, 1, 0),
-        FMT(this->annotation_prefix, " move trap")
-    );
+        FMT(this->annotation_prefix, " move trap"));
 
     this->pb.add_r1cs_constraint(
-        libsnark::r1cs_constraint<Fr>(lc_sign_left, action[0], prod[0]),
-        FMT(this->annotation_prefix, " move left")
-    );
+        libsnark::r1cs_constraint<Fr>(lc_sign_left, action_[0], prod_[0]),
+        FMT(this->annotation_prefix, " move left"));
 
     this->pb.add_r1cs_constraint(
-        libsnark::r1cs_constraint<Fr>(lc_sign_down, action[1], prod[1]),
-        FMT(this->annotation_prefix, " move down")
-    );
+        libsnark::r1cs_constraint<Fr>(lc_sign_down, action_[1], prod_[1]),
+        FMT(this->annotation_prefix, " move down"));
 
     this->pb.add_r1cs_constraint(
-        libsnark::r1cs_constraint<Fr>(lc_sign_right, action[2], prod[2]),
-        FMT(this->annotation_prefix, " move right")
-    );
+        libsnark::r1cs_constraint<Fr>(lc_sign_right, action_[2], prod_[2]),
+        FMT(this->annotation_prefix, " move right"));
 
     this->pb.add_r1cs_constraint(
-        libsnark::r1cs_constraint<Fr>(lc_sign_top, action[3], prod[3]),
-        FMT(this->annotation_prefix, " move top")
-    );
+        libsnark::r1cs_constraint<Fr>(lc_sign_top, action_[3], prod_[3]),
+        FMT(this->annotation_prefix, " move top"));
 
-    move = move - prod[0];
-    move = move + prod[1] * l;
-    move = move + prod[2];
-    move = move - prod[3] * l;
+    move = move - prod_[0];
+    move = move + prod_[1] * l;
+    move = move + prod_[2];
+    move = move - prod_[3] * l;
 
     this->pb.add_r1cs_constraint(
-        libsnark::r1cs_constraint<Fr>(move, 1, out_state_pack),
-        FMT(this->annotation_prefix, " move")
-    );
+        libsnark::r1cs_constraint<Fr>(move, 1, out_state_pack_),
+        FMT(this->annotation_prefix, " move"));
   }
 
   void generate_r1cs_witness() {
-    namespace fp = circuit::fp;
-    fp::RationalConst<8, 24> rationalConst;
-
     int l = std::sqrt(n_state);
-    in_onehot_gadget->generate_r1cs_witness_from_bits();
 
-    int in_pack = (this->pb.lc_val(in_state_pack) / rationalConst.kFrN).getInt64();
-    if(this->pb.val(action[0]) == 1){
-        if(in_pack % l != 0){
-            this->pb.val(out_state_pack) = this->pb.lc_val(in_state_pack) - rationalConst.kFrN;
-            this->pb.val(prod[0]) = rationalConst.kFrN;
-        }else{
-            this->pb.val(out_state_pack) = this->pb.lc_val(in_state_pack);
-            this->pb.val(prod[0]) = 0;
-        }
-    }else if(this->pb.val(action[1]) == 1){
-        if(in_pack < n_state - l){
-            this->pb.val(out_state_pack) =  this->pb.lc_val(in_state_pack) + l * rationalConst.kFrN;
-            this->pb.val(prod[1]) = rationalConst.kFrN;
-        }else{
-            this->pb.val(out_state_pack) = this->pb.lc_val(in_state_pack);
-            this->pb.val(prod[1]) = 0;
-        }
-    }else if(this->pb.val(action[2]) == 1){
-        if(in_pack % l != l - 1){
-            this->pb.val(out_state_pack) = this->pb.lc_val(in_state_pack) + rationalConst.kFrN;;
-            this->pb.val(prod[2]) = rationalConst.kFrN;
-        }else{
-            this->pb.val(out_state_pack) = this->pb.lc_val(in_state_pack);
-            this->pb.val(prod[2]) = 0;
-        }
-    }else{
-        if(in_pack >= l){
-            this->pb.val(out_state_pack) = this->pb.lc_val(in_state_pack) - l * rationalConst.kFrN;
-            this->pb.val(prod[3]) = rationalConst.kFrN;
-        }else{
-            this->pb.val(out_state_pack) = this->pb.lc_val(in_state_pack);
-            this->pb.val(prod[3]) = 0;
-        }
+    int in_pack = this->pb.val(in_state_pack_).getInt64();
+
+    // Initialize all prod values to zero
+    for (size_t i = 0; i < n_action; ++i) {
+      this->pb.val(prod_[i]) = 0;
     }
-    out_onehot_gadget->generate_r1cs_witness_from_packed();
+
+    if (this->pb.val(action_[0]) == 1) {
+      if (in_pack % l != 0) {
+        this->pb.val(out_state_pack_) = in_pack - 1;
+        this->pb.val(prod_[0]) = 1;
+      } else {
+        this->pb.val(out_state_pack_) = in_pack;
+        this->pb.val(prod_[0]) = 0;
+      }
+    } else if (this->pb.val(action_[1]) == 1) {
+      if (in_pack < (int)(n_state - l)) {
+        this->pb.val(out_state_pack_) = in_pack + l;
+        this->pb.val(prod_[1]) = 1;
+      } else {
+        this->pb.val(out_state_pack_) = in_pack;
+        this->pb.val(prod_[1]) = 0;
+      }
+    } else if (this->pb.val(action_[2]) == 1) {
+      if (in_pack % l != l - 1) {
+        this->pb.val(out_state_pack_) = in_pack + 1;
+        this->pb.val(prod_[2]) = 1;
+      } else {
+        this->pb.val(out_state_pack_) = in_pack;
+        this->pb.val(prod_[2]) = 0;
+      }
+    } else {
+      if (in_pack >= l) {
+        this->pb.val(out_state_pack_) = in_pack - l;
+        this->pb.val(prod_[3]) = 1;
+      } else {
+        this->pb.val(out_state_pack_) = in_pack;
+        this->pb.val(prod_[3]) = 0;
+      }
+    }
+    out_onehot_gadget_->generate_r1cs_witness();
   }
 
  private:
   size_t n_state = 64, n_action = 4;
 
-  std::vector<int> trap = {
-    19, 29, 35, 41, 42, 46, 49, 52, 54, 59
-  };
+  std::vector<int> trap_ = {
+      19, 29, 35, 41, 42, 46, 49, 52, 54, 59};
 
-  libsnark::pb_variable_array<Fr> in_state;
-  libsnark::pb_variable_array<Fr> out_state;
-  libsnark::pb_variable_array<Fr> action; //action在之前已经验证过
-  libsnark::pb_variable_array<Fr> prod;
+  // 外部变量
+  libsnark::pb_variable_array<Fr> const& in_state_;
+  libsnark::pb_variable_array<Fr> const& action_;
+  libsnark::pb_variable<Fr> const& in_state_pack_;
 
-  libsnark::pb_variable<Fr> in_state_pack;
-  libsnark::pb_variable<Fr> out_state_pack;
+  // 输出变量
+  libsnark::pb_variable_array<Fr> prod_;
+  libsnark::pb_variable<Fr> out_state_pack_;
 
-  std::unique_ptr<OnehotGadget> in_onehot_gadget;
-  std::unique_ptr<OnehotGadget> out_onehot_gadget;
-  
+  std::unique_ptr<::circuit::onehot_gadget> out_onehot_gadget_;
 };
 
-inline int move(int state, int action, int l){
-    if(action == 0){
-        if(state % l == 0){
-            return state;
-        }else{
-            return state - 1;
-        }
-    }else if(action == 1){
-        if(state >= (l-1)*l){
-            return state;
-        }else{
-            return state + l;
-        }
-    }else if(action == 2){
-        if(state % l == l-1){
-            return state;
-        }else{
-            return state + 1;
-        }
-    }else{
-        if(state < l){
-            return state;
-        }else{
-            return state - l;
-        }
-    }
-}
-
-inline bool EnvTest() {
-  Tick tick(__FN__);
-  constexpr size_t D = 8;
-  constexpr size_t N = 24;
-
-  std::vector<bool> rets;
-
-  circuit::fixed_point::RationalConst<D, N> rationalConst;
-  std::vector<Fr> state(64, 0), action(4, 0);
-  std::vector<int> trap_state = {
-    19, 29, 35, 41, 42, 46, 49, 52, 54, 59
-  };
-
-  for(int i=0; i<64; i++){
-    state[i] = rationalConst.kFrN;
-    for(int j=0; j<4; j++){
-        action[j] = 1;
-        if(std::find(trap_state.begin(), trap_state.end(), move(i, j, 8)) == trap_state.end()){
-            rets.push_back(EnvGadget::Test(state, action, move(i, j, 8) * rationalConst.kFrN));
-        }
-        action[j] = 0;
-    }
-    state[i] = 0;
-  }
-
-  std::cout << "\n\nret:" << std::all_of(rets.begin(), rets.end(), [](auto i) { return i; }) << "*****\n\n";
-  return std::all_of(rets.begin(), rets.end(), [](auto i) { return i; });
-}
-};  // namespace circuit::frozenlake
+}  // namespace circuit::frozenlake

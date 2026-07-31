@@ -1,9 +1,14 @@
 #pragma once
 
+#include <cassert>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+
 #include "../details.h"
-#include "argument/a6.h"
-#include "circuit/fixed_point/fixed_point.h"
-#include "circuit/frozenlake/env_gadget.h"
+#include "argument/a12.h"
+#include "circuit/func.h"
+#include "circuit/frozenlake/dqn_env_gadget.h"
 
 extern std::vector<std::vector<Fr>> max4_a;
 extern std::vector<std::vector<Fr>> max4_b;
@@ -16,954 +21,14 @@ extern std::vector<std::vector<Fr>> relu_c;
 namespace clink::frozenlake{
 std::vector<std::vector<Fr>> env_a, env_b, env_c;
 
-struct FrozenLake{
-    struct Para{
-        std::vector<std::vector<Fr>> dense1; //(64 + 1) * 12
-        std::vector<std::vector<Fr>> dense2; //(12 + 1) * 8
-        std::vector<std::vector<Fr>> dense3; //(8 + 1) * 4
-        size_t m1() const { return 65;}
-        size_t n1() const { return 12;}
-        size_t m2() const { return 13;}
-        size_t n2() const { return 8;}
-        size_t m3() const { return 9;}
-        size_t n3() const { return 4;}
-    };
-
-    struct ParaCommitmentPub { // commitment of col
-        std::vector<G1> dense1; //65
-        std::vector<G1> dense2; //13
-        std::vector<G1> dense3; //9
-
-        size_t m1() const { return 65;}
-        size_t n1() const { return 12;}
-        size_t m2() const { return 13;}
-        size_t n2() const { return 8;}
-        size_t m3() const { return 9;}
-        size_t n3() const { return 4;}
-    };
-
-    struct ParaCommitmentSec { // the random used to compute commitment
-        std::vector<Fr> r_dense1; //65
-        std::vector<Fr> r_dense2; //13
-        std::vector<Fr> r_dense3; //9
-    };
-
-    struct ProveOutput{ //the information about inner product
-        bool is_row;
-        std::vector<G1> com_data;   //n
-        std::vector<Fr> r_com_data; //n
-        std::vector<std::vector<Fr>> data; //n * 12
-
-        ProveOutput(bool is_row=true)
-            : is_row(is_row){   
-        }
-
-        size_t m() const { return data.size(); }
-        size_t n() const { return data[0].size(); }
-    };
-
-    struct ProveDenseInput {
-
-        ProveDenseInput(std::vector<std::vector<Fr>> const& para_dense,
-                        std::vector<Fr> const& r_com_para_dense,
-                        ProveOutput const& last_output)
-            : para_dense(para_dense),
-            r_com_para_dense(r_com_para_dense),
-            data(last_output.data),
-            r_com_data(last_output.r_com_data),
-            is_row(last_output.is_row) {
-            namespace fp = circuit::fp;
-            CHECK(data[0].size() == para_dense.size() - 1, "");
-            for(size_t i=0; i<data.size(); i++){
-                this->data[i].push_back(fp::RationalConst<8, 24>().kFrN);
-            }
-            if(!is_row){
-                this->r_com_data.push_back(FrZero());
-            }
-        }
-        std::vector<std::vector<Fr>> const& para_dense;
-        std::vector<Fr> const& r_com_para_dense;
-        
-        std::vector<std::vector<Fr>> data;
-        std::vector<Fr> r_com_data; 
-
-        bool is_row = true;
-    };
-
-    struct VerifyDenseInput {
-        /**
-         * _n, 如果为行, 则为列数; 如果为列, 则为行数
-         * 
-         */
-        VerifyDenseInput(size_t m, size_t n,
-                         std::vector<G1> const& com_data,
-                         std::vector<G1> const& com_para_dense,
-                         bool is_row = true)
-            : m(m), n(n), is_row(is_row), com_data(com_data), com_para_dense(com_para_dense) {
-            namespace fp = circuit::fp;
-            size_t k = com_para_dense.size()-1;
-            if(is_row){
-                assert(com_data.size() == m);
-                for(size_t i=0; i<com_data.size(); i++){
-                    this->com_data[i] += pc::PcG(k) * fp::RationalConst<8, 24>().kFrN;
-                }
-            }else{
-                assert(com_data.size() == com_para_dense.size() - 1);
-                this->com_data.push_back(pc::ComputeSigmaG(0, m) * fp::RationalConst<8, 24>().kFrN);
-            }
-            
-        }
-        size_t m, n;
-        bool is_row = true;
-        std::vector<G1> com_data;
-        std::vector<G1> const& com_para_dense;
-    };
-
-    struct ProveRelu2Input {
-        typedef circuit::fixed_point::Relu2Gadget<8, 24 * 2, 24> Relu2Gadget;
-        ProveRelu2Input(std::vector<Fr> const& in_data,
-                        Fr const& r_com_in_data,
-                        G1 const& com_in_data,
-                        std::vector<Fr> const& out_data,
-                        Fr const& r_com_out_data,
-                        G1 const& com_out_data)
-            : in_data(in_data), com_in_data(com_in_data), r_com_in_data(r_com_in_data),
-              out_data(out_data), com_out_data(com_out_data), r_com_out_data(r_com_out_data) {
-            namespace fp = circuit::fp;
-            assert(in_data.size() == out_data.size());
-
-            libsnark::protoboard<Fr> pb;
-            Relu2Gadget gadget(pb, "Mnist Relu2Gadget");
-            r1cs_ret_index = gadget.ret().index;  // see protoboard<FieldT>::val
-            
-            n = in_data.size();
-            s = pb.num_variables() + 1;
-            w.resize(s, std::vector<Fr>(n));
-
-            auto parallel_f = [this](size_t j){
-                libsnark::protoboard<Fr> pb;
-                Relu2Gadget gadget(pb, "Mnist Relu2Gadget");
-                gadget.Assign(this->in_data[j]);
-                assert(pb.is_satisfied());
-                auto v = pb.full_variable_assignment();
-                CopyRowToLine(w, v, j, true);
-            };
-            parallel::For(n, parallel_f);
-            assert(w[r1cs_ret_index] == out_data);
-        }
-
-        std::vector<Fr> const& out_data;
-        Fr const& r_com_out_data;
-        G1 const& com_out_data;
-
-        std::vector<Fr> const& in_data;
-        Fr const& r_com_in_data;
-        G1 const& com_in_data;
-        int64_t s, n;
-        std::vector<std::vector<Fr>> mutable w;
-        int64_t r1cs_ret_index;
-    };
-
-    struct VerifyRelu2Input {
-        typedef circuit::fixed_point::Relu2Gadget<8, 24 * 2, 24> Relu2Gadget;
-        VerifyRelu2Input(size_t n,
-                        G1 const& com_in_data,
-                        G1 const& com_out_data)
-            : n(n),
-              com_in_data(com_in_data),
-              com_out_data(com_out_data) {
-            namespace fp = circuit::fp;
-
-            libsnark::protoboard<Fr> pb;
-            Relu2Gadget gadget(pb, "Mnist Relu2Gadget");
-            r1cs_ret_index = gadget.ret().index;  // see protoboard<FieldT>::val
- 
-            s = pb.num_variables() + 1;
-        }
-
-        G1 const& com_out_data;
-        G1 const& com_in_data;
-        int64_t s, n;
-        int64_t r1cs_ret_index;
-    };
-
-    struct ProveMax2Input {
-        typedef circuit::fixed_point::Max2Gadget<8, 24 * 2> Max2Gadget;
-        ProveMax2Input(ProveOutput const& output)
-            : data(output.data),
-              com_data(output.com_data),
-              r_com_data(output.r_com_data) {
-            namespace fp = circuit::fp;
-            libsnark::protoboard<Fr> pb;
-            Max2Gadget gadget(pb, data[0].size(), "Mnist Max2Gadget");
-            r1cs_ret_index = gadget.ret().index;  // see protoboard<FieldT>::val
-            s = pb.num_variables() + 1;
-            n = data.size();
-            w.resize(s, std::vector<Fr>(n));
-
-            auto parallel_f = [this](size_t j){
-                libsnark::protoboard<Fr> pb;
-                Max2Gadget gadget(pb, this->data[j].size(), "Mnist Max2Gadget");
-                gadget.Assign(this->data[j]);
-                assert(pb.is_satisfied());
-                auto v = pb.full_variable_assignment();
-                CopyRowToLine(w, v, j, true);
-            };
-            parallel::For(n, parallel_f);
-        }
-
-        std::vector<std::vector<Fr>> const& data;
-        std::vector<Fr> const& r_com_data;
-        std::vector<G1> const& com_data;
-        int64_t s;
-        int64_t n;
-        std::vector<std::vector<Fr>> mutable w;
-        int64_t r1cs_ret_index;
-    };
-
-    struct VerifyMax2Input {
-        typedef circuit::fixed_point::Max2Gadget<8, 24 * 2> Max2Gadget;
-        VerifyMax2Input(size_t n, std::vector<G1> const& com_data)
-            : n(n), com_data(com_data) {
-            namespace fp = circuit::fp;
-            libsnark::protoboard<Fr> pb;
-            Max2Gadget gadget(pb, com_data.size(), "Mnist Max2Gadget");
-            r1cs_ret_index = gadget.ret().index;  // see protoboard<FieldT>::val
-            s = pb.num_variables() + 1;
-        }
-
-        std::vector<G1> const& com_data;
-        int64_t s;
-        int64_t n;
-        int64_t r1cs_ret_index;
-    };
-
-    struct ProveCombineInput {
-        ProveCombineInput(ProveOutput const& output1, ProveOutput const& output2) {
-            data = output1.data;
-            data.insert(data.end(), output2.data.begin(), output2.data.end());
-
-            com_data = output1.com_data;
-            com_data.insert(com_data.end(), output2.com_data.begin(), output2.com_data.end());
-
-            r_com_data = output1.r_com_data;
-            r_com_data.insert(r_com_data.end(), output2.r_com_data.begin(), output2.r_com_data.end());
-
-            for(size_t i=0; i<data.size(); i++){
-                combine_data.insert(combine_data.end(), data[i].begin(), data[i].end());
-            }
-            
-            r_com_combine_data = FrRand();
-            com_combine_data = pc::ComputeCom(combine_data, r_com_combine_data);
-        }
-
-        std::vector<std::vector<Fr>> data;
-        std::vector<Fr> r_com_data;
-        std::vector<G1> com_data;
-
-        std::vector<Fr> combine_data;
-        Fr r_com_combine_data;
-        G1 com_combine_data;
-    };
-
-    struct VerifyCombineInput {
-        VerifyCombineInput(size_t n1,
-                           size_t n2,
-                           std::vector<G1> const& com_data1,
-                           std::vector<G1> const& com_data2,
-                           G1 const& com_combine_data)
-            : n1(n1),
-              n2(n2),
-              com_combine_data(com_combine_data) {
-            m1 = com_data1.size();
-            m2 = com_data2.size();
-            com_data = com_data1;
-            com_data.insert(com_data.end(), com_data2.begin(), com_data2.end());
-        }
-
-        std::vector<G1> com_data;
-        size_t n1, n2, m1, m2;
-        G1 com_combine_data;
-    };
-
-    struct ProveEnvInput {
-        typedef circuit::frozenlake::EnvGadget EnvGadget;
-    
-        ProveEnvInput(ProveOutput const& out1, ProveOutput const& out2)
-            : state(out1.data),
-              com_state(out1.com_data),
-              r_com_state(out1.r_com_data),
-              action(out2.data),
-              com_action(out2.com_data),
-              r_com_action(out2.r_com_data) {
-            assert(state.size() == action[0].size());
-            assert(!out1.is_row && out2.is_row);
-            namespace fp = circuit::fp;
-
-            libsnark::protoboard<Fr> pb;
-            EnvGadget gadget(pb, "Frozenlake EnvGadget");
-
-            r1cs_ret_index = gadget.ret().index;  // see protoboard<FieldT>::val
-            in_index = gadget.in().index;
-
-            s = pb.num_variables() + 1;
-            n = state.size();
-            w.resize(s, std::vector<Fr>(n));
-
-            auto parallel_f = [this](size_t j){
-                libsnark::protoboard<Fr> pb;
-                EnvGadget gadget(pb, "Frozenlake EnvGadget");
-                std::vector<Fr> act = {this->action[0][j], this->action[1][j], this->action[2][j], this->action[3][j]};
-                gadget.Assign(this->state[j], act);
-                assert(pb.is_satisfied());
-                auto v = pb.full_variable_assignment();
-                CopyRowToLine(w, v, j, true);
-            };
-            parallel::For(n, parallel_f);
-        }
-        std::vector<G1> const& com_state;
-        std::vector<G1> const& com_action;
-        std::vector<Fr> const& r_com_state;
-        std::vector<Fr> const& r_com_action;
-        std::vector<std::vector<Fr>> const& state;
-        std::vector<std::vector<Fr>> const& action;
-        int64_t s;
-        int64_t n;
-        std::vector<std::vector<Fr>> mutable w;
-        int64_t r1cs_ret_index, in_index;
-    };
-
-    struct VerifyEnvInput {
-        typedef circuit::frozenlake::EnvGadget EnvGadget;
-        VerifyEnvInput(size_t n,
-                       std::vector<G1> const& com_state,
-                       std::vector<G1> const& com_action)
-             : n(n),
-               com_state(com_state),
-               com_action(com_action) {
-            namespace fp = circuit::fp;
-
-            libsnark::protoboard<Fr> pb;
-            EnvGadget gadget(pb, "Frozenlake EnvGadget");
-
-            r1cs_ret_index = gadget.ret().index;  // see protoboard<FieldT>::val
-            in_index = gadget.in().index;
-            s = pb.num_variables() + 1;
-        }
-        int64_t s;
-        int64_t n;
-        int64_t r1cs_ret_index, in_index;
-        std::vector<G1> const& com_state;
-        std::vector<G1> const& com_action;
-    };
-
-    struct VerifyInput {
-        VerifyInput(size_t const& m_, int64_t const& n_,
-                    std::vector<G1> const& data_com_pub,
-                    std::vector<G1> const& action_com_pub,
-                    ParaCommitmentPub const& para_com_pub,
-                    GetRefG1 const& get_g)
-            :   m_(m_),
-                n_(n_),
-                data_com_pub(data_com_pub),
-                para_com_pub(para_com_pub),
-                action_com_pub(action_com_pub),
-                get_g(get_g) {
-            }
-            ParaCommitmentPub const& para_com_pub;
-            std::vector<G1> const& data_com_pub;
-            std::vector<G1> const& action_com_pub;
-            GetRefG1 const& get_g;
-            size_t m_, n_;
-            size_t m() const { return m_; }
-            size_t n() const { return n_; }
-            size_t m1() const { return 64;}
-            size_t n1() const { return 12;}
-            size_t m2() const { return 12;}
-            size_t n2() const { return 8;}
-            size_t m3() const { return 8;}
-            size_t n3() const { return 4;}
-            std::string to_string() const {
-            return std::to_string(m()) + "*" + std::to_string(n());
-        }
-    };
-
-    struct DenseProof{
-        std::vector<G1> com;
-        argument::A6::Proof sub_proof;
-
-        bool operator==(DenseProof const& b) const {
-            return com == b.com && sub_proof == b.sub_proof;
-        }
-
-        bool operator!=(DenseProof const& b) const { return !(*this == b); }
-
-        template <typename Ar>
-        void serialize(Ar& ar) const {
-            ar& YAS_OBJECT_NVP("d.p", ("c", com), ("p", sub_proof));
-        }
-        template <typename Ar>
-        void serialize(Ar& ar) {
-            ar& YAS_OBJECT_NVP("d.p", ("c", com), ("p", sub_proof));
-        }
-    };
-
-    struct CombineProof{
-        G1 com1; //combine in
-        G1 com2; //combine out
-
-        argument::A4::Proof sub_proof;
-
-        bool operator==(CombineProof const& b) const {
-            return sub_proof == b.sub_proof && com1 == b.com1 && com2 == b.com2;
-        }
-
-        bool operator!=(CombineProof const& b) const { return !(*this == b); }
-
-        template <typename Ar>
-        void serialize(Ar& ar) const {
-            ar& YAS_OBJECT_NVP("cb.p", ("p", sub_proof), ("1", com1), ("2", com2));
-        }
-        template <typename Ar>
-        void serialize(Ar& ar) {
-            ar& YAS_OBJECT_NVP("cb.p", ("p", sub_proof), ("1", com1), ("2", com2));
-        }
-    };
-
-    struct Relu2Proof{
-        std::vector<G1> com1;
-        std::vector<G1> com2;
-        std::vector<G1> com_w;
-        argument::A7::Proof r1cs_proof;
-
-        bool operator==(Relu2Proof const& b) const {
-            return r1cs_proof == b.r1cs_proof && com1 == b.com1 && com2 == b.com2 && com_w == b.com_w;
-        }
-
-        bool operator!=(Relu2Proof const& b) const { return !(*this == b); }
-
-        template <typename Ar>
-        void serialize(Ar& ar) const {
-            ar& YAS_OBJECT_NVP("rl.p", ("p", r1cs_proof), ("1", com1), ("2", com2), ("w", com_w));
-        }
-        template <typename Ar>
-        void serialize(Ar& ar) {
-            ar& YAS_OBJECT_NVP("rl.p", ("p", r1cs_proof), ("1", com1), ("2", com2), ("w", com_w));
-        }
-    };
-
-    struct Max2Proof{
-        std::vector<G1> com_w;
-        argument::A7::Proof r1cs_proof;
-
-        bool operator==(Max2Proof const& b) const {
-            return r1cs_proof == b.r1cs_proof && com_w == b.com_w;
-        }
-
-        bool operator!=(Max2Proof const& b) const { return !(*this == b); }
-
-        template <typename Ar>
-        void serialize(Ar& ar) const {
-            ar& YAS_OBJECT_NVP("dr.p", ("r1cs", r1cs_proof), ("w", com_w));
-        }
-        template <typename Ar>
-        void serialize(Ar& ar) {
-            ar& YAS_OBJECT_NVP("dr.p", ("r1cs", r1cs_proof), ("w", com_w));
-        }
-    };
-
-    struct ModelProof{
-        CombineProof combine_proof;
-        DenseProof dense1_proof;
-        DenseProof dense2_proof;
-        DenseProof dense3_proof;
-        Relu2Proof relu_proof;
-        Max2Proof max_proof;
-
-        bool operator==(ModelProof const& b) const {
-            return combine_proof == b.combine_proof && dense1_proof == b.dense1_proof &&
-                   dense2_proof == b.dense2_proof && dense3_proof == b.dense3_proof &&
-                   relu_proof == b.relu_proof && max_proof == b.max_proof;
-        }
-
-        bool operator!=(ModelProof const& b) const { return !(*this == b); }
-
-        template <typename Ar>
-        void serialize(Ar& ar) const {
-            ar& YAS_OBJECT_NVP("infer.p", ("c", combine_proof), ("d1", dense1_proof),
-                              ("d2", dense2_proof), ("d3", dense3_proof),
-                              ("rl", relu_proof), ("mx", max_proof));
-        }
-        template <typename Ar>
-        void serialize(Ar& ar) {
-            ar& YAS_OBJECT_NVP("infer.p", ("c", combine_proof), ("d1", dense1_proof),
-                              ("d2", dense2_proof), ("d3", dense3_proof),
-                              ("rl", relu_proof), ("mx", max_proof));
-        }
-    };
-
-    struct EnvProof{
-        G1 com1, com2;
-        std::vector<Fr> z; 
-        Fr r_com_z1, r_com_z2;
-
-        std::vector<G1> com_w;
-        argument::A7::Proof r1cs_proof;
-
-        bool operator==(EnvProof const& b) const {
-            return r1cs_proof == b.r1cs_proof && com_w == b.com_w &&
-                    com1 == b.com1 && com2 == b.com2 && z == b.z &&
-                    r_com_z1 == b.r_com_z1 && r_com_z2 == b.r_com_z2;
-        }
-
-        bool operator!=(EnvProof const& b) const { return !(*this == b); }
-
-        template <typename Ar>
-        void serialize(Ar& ar) const {
-            ar& YAS_OBJECT_NVP("ev.p", ("r1cs", r1cs_proof), ("w", com_w), ("1", com1),
-                                       ("2", com2), ("r1", r_com_z1), ("r2", r_com_z2), ("z", z));
-        }
-        template <typename Ar>
-        void serialize(Ar& ar) {
-            ar& YAS_OBJECT_NVP("ev.p", ("r1cs", r1cs_proof), ("w", com_w), ("1", com1),
-                                       ("2", com2), ("r1", r_com_z1), ("r2", r_com_z2), ("z", z));
-        }
-    };
-
-    struct Message{
-        EnvProof env_proof;
-        ModelProof mdl_proof;
-        Pod::KeyProof key_proof;
-        Pod::MimcProof mimc_proof;
-        
-
-        Fr r_enc_action;
-        std::vector<Fr> enc_action;
-
-         bool operator==(Message const& b) const {
-            return  env_proof == b.env_proof && mdl_proof == b.mdl_proof &&
-                    mimc_proof == b.mimc_proof && r_enc_action == b.r_enc_action && 
-                    enc_action == b.enc_action && key_proof == b.key_proof;
-        }
-
-        bool operator!=(Message const& b) const { return !(*this == b); }
-
-        template <typename Ar>
-        void serialize(Ar& ar) const {
-            ar& YAS_OBJECT_NVP("msg.p", ("p1", env_proof), ("p2", mdl_proof), ("p3", mimc_proof),
-                                        ("p4", key_proof), ("r", r_enc_action), ("c", enc_action));
-        }
-        template <typename Ar>
-        void serialize(Ar& ar) {
-            ar& YAS_OBJECT_NVP("msg.p", ("p1", env_proof), ("p2", mdl_proof), ("p3", mimc_proof),
-                                        ("p4", key_proof), ("r", r_enc_action), ("c", enc_action));
-        }
-    };
-
-    static void ProveDense(DenseProof& proof, ProveOutput& output, h256_t seed,
-                            ProveDenseInput const& input) {
-        Tick tick(__FN__);
-        namespace fp = circuit::fp;
-        size_t m = input.data.size(), k = input.data[0].size(), n = input.para_dense[0].size();
-
-        MatrixMul(input.data, input.para_dense, output.data);
-
-        ComputeOutCom(output);
-    
-        proof.com = output.com_data;
-        argument::A6::ProveInput a6_in(input.data, input.para_dense, output.data, pc::kGetRefG1);
-        argument::A6::CommitmentSec a6_sec(input.r_com_data, input.r_com_para_dense, output.r_com_data, input.is_row, output.is_row);
-        argument::A6::Prove(proof.sub_proof, seed, a6_in, a6_sec);
-    }
-
-    static bool VerifyDense(DenseProof const& proof, h256_t seed,
-                            VerifyDenseInput const& input, bool in_is_row=true, bool out_is_row=true) {
-        Tick tick(__FN__);
-
-        size_t m = input.m, k = input.com_para_dense.size(), n = input.n;
-        
-        argument::A6::CommitmentPub a6_pub(input.com_data, input.com_para_dense, proof.com, in_is_row, out_is_row);
-        argument::A6::VerifyInput a6_in(m, k, n, a6_pub, pc::kGetRefG1);
-        return argument::A6::Verify(proof.sub_proof, seed, a6_in);
-    }
-
-     static void ProveMax2(Max2Proof& proof, ProveOutput & output, 
-                           ProveOutput & action, h256_t seed,
-                           ProveMax2Input const& input) {
-        Tick tick(__FN__);
-        namespace fp = circuit::fp;
-        std::vector<G1> com_w(input.s);
-        std::vector<Fr> com_w_r(input.s);
-
-        std::cout << "compute com(witness)\n";
-        auto parallel_f = [&com_w_r, &com_w, &input](int64_t i) {
-            if(i == 0){ 
-                com_w_r[i] = FrZero();
-                com_w[i] = pc::ComputeSigmaG(0, input.w[0].size());
-            }else if (i < 5) {
-                com_w_r[i] = input.r_com_data[i-1];
-                com_w[i] = input.com_data[i-1];
-            } else {
-                com_w_r[i] = FrRand();
-                com_w[i] = pc::ComputeCom(input.w[i], com_w_r[i], true);
-            }
-        };
-        parallel::For<int64_t>(input.s, parallel_f);
-
-        // save output for next step
-        output.r_com_data.push_back(com_w_r[input.r1cs_ret_index]);
-        output.com_data.push_back(com_w[input.r1cs_ret_index]);
-        output.data.push_back(input.w[input.r1cs_ret_index]);
-
-        for(size_t i=0; i<4; i++){
-            action.data.push_back(input.w[6+i]);
-            action.com_data.push_back(com_w[6+i]);
-            action.r_com_data.push_back(com_w_r[6+i]);
-        }
-        action.data.push_back(input.w[input.r1cs_ret_index]);
-        action.com_data.push_back(com_w[input.r1cs_ret_index]);
-        action.r_com_data.push_back(com_w_r[input.r1cs_ret_index]);
-
-        proof.com_w = std::move(com_w);
-        UpdateSeed(seed, proof.com_w);
-
-        std::vector<std::vector<Fr>> wa, wb, wc;
-        std::vector<Fr> r_com_wa, r_com_wb, r_com_wc;
-        ComputeWitness(input.w, max4_a, max4_b, max4_c, wa, wb, wc, com_w_r, r_com_wa, r_com_wb, r_com_wc);
-        argument::A7::CommitmentSec a7_sec(r_com_wa, r_com_wb, r_com_wc);
-        argument::A7::ProveInput a7_input(wa, wb, wc, pc::kGetRefG1);
-        argument::A7::Prove(proof.r1cs_proof, seed, a7_input, a7_sec);
-    }
-
-     static bool VerifyMax2(Max2Proof const& proof, h256_t seed,
-                           VerifyMax2Input const& input) {
-        Tick tick(__FN__);
-        if(proof.com_w[0] != pc::ComputeSigmaG(0, input.n)){
-            assert(false);
-            return false;
-        }
-
-        for(size_t i=0; i<input.com_data.size(); i++){
-            if(proof.com_w[i+1] != input.com_data[i]){
-                assert(false);
-                return false;
-            }
-        }
-        UpdateSeed(seed, proof.com_w);
-        return argument::A7::Verify(input.n, proof.r1cs_proof, seed, max4_a, max4_b, max4_c, proof.com_w, pc::kGetRefG1);
-    }
-
-    static void ProveRelu2(Relu2Proof& proof, h256_t seed, ProveRelu2Input const& input) {
-        Tick tick(__FN__);
-        namespace fp = circuit::fp;
-        std::vector<G1> com_w(input.s);
-        std::vector<Fr> com_w_r(input.s);
-
-        std::cout << "compute com(witness)\n";
-        auto parallel_f = [&com_w_r, &com_w, &input](int64_t i) {
-            if(i == 0){ 
-                com_w_r[i] = FrZero();
-                com_w[i] = pc::ComputeSigmaG(0, input.w[0].size());
-            }else if (i == 1) {
-                com_w_r[i] = input.r_com_in_data;
-                com_w[i] = input.com_in_data;
-            } else if(i == input.r1cs_ret_index){
-                com_w_r[i] = input.r_com_out_data;
-                com_w[i] = input.com_out_data;
-            } else {
-                com_w_r[i] = FrRand();
-                com_w[i] = pc::ComputeCom(input.w[i], com_w_r[i], true);
-            }
-        };
-        parallel::For<int64_t>(input.s, parallel_f);
-
-        proof.com_w = std::move(com_w);
-        UpdateSeed(seed, proof.com_w);
-
-        std::vector<std::vector<Fr>> wa, wb, wc;
-        std::vector<Fr> r_com_wa, r_com_wb, r_com_wc;
-        ComputeWitness(input.w, relu_a, relu_b, relu_c, wa, wb, wc, com_w_r, r_com_wa, r_com_wb, r_com_wc);
-        argument::A7::CommitmentSec a7_sec(r_com_wa, r_com_wb, r_com_wc);
-        argument::A7::ProveInput a7_input(wa, wb, wc, pc::kGetRefG1);
-        argument::A7::Prove(proof.r1cs_proof, seed, a7_input, a7_sec);
-    }
-
-    static bool VerifyRelu2(Relu2Proof const& proof, h256_t seed, VerifyRelu2Input const& input) {
-        Tick tick(__FN__);
-        if(proof.com_w[0] != pc::ComputeSigmaG(0, input.n)){
-            assert(false);
-            return false;
-        }
-
-        if(proof.com_w[1] != input.com_in_data || proof.com_w[input.r1cs_ret_index] != input.com_out_data){
-            assert(false);
-            return false;
-        }
-        
-        UpdateSeed(seed, proof.com_w);
-        return argument::A7::Verify(input.n, proof.r1cs_proof, seed, relu_a, relu_b, relu_c, proof.com_w, pc::kGetRefG1);
-    }
-
-    static void ProveCombine(CombineProof& proof, h256_t seed,
-                             ProveCombineInput const& input1,
-                             ProveCombineInput const& input2) {
-        Tick tick(__FN__);
-        std::vector<Fr> vec_e(1);
-        ComputeFst(seed, "combine e", vec_e);
-        Fr e = vec_e[0];
-
-        std::vector<Fr> combine_data = input1.combine_data * e + input2.combine_data;
-        Fr r_com_combine_data = input1.r_com_combine_data * e + input2.r_com_combine_data;
-        
-        ProveOutput output;
-        std::vector<std::vector<Fr>> data = MatrixMul(input1.data, e);
-        for(size_t i=0; i<data.size(); i++){
-            data[i] = data[i] + input2.data[i];
-        }
-
-        std::vector<Fr> r_com_data = input1.r_com_data * e + input2.r_com_data;
-
-        std::vector<std::vector<Fr>> r(data.size());
-        std::vector<Fr> combine_r;
-        
-        for(size_t i=0; i<data.size(); i++){
-            r[i].resize(data[i].size());
-            ComputeFst(seed, "combine r " + std::to_string(i), r[i]);
-            combine_r.insert(combine_r.end(), r[i].begin(), r[i].end());
-        }
-        assert(InnerProduct(data, r) == InnerProduct(combine_data, combine_r));
-
-        std::vector<std::vector<Fr>> &a = data, &b = r;
-        std::vector<Fr> &r_com_a = r_com_data;
-        Fr c = 0, r_com_c = 0;
-
-        b.push_back(-combine_r);
-        a.push_back(combine_data);
-        r_com_a.push_back(r_com_combine_data);
-
-        argument::A4::ProveInput a4_in(a, b, c, pc::kGetRefG1, pc::kGetRefG1(0));
-        argument::A4::CommitmentSec a4_sec(r_com_a, r_com_c);
-        argument::A4::Prove(proof.sub_proof, seed, a4_in, a4_sec);
-        
-        proof.com1 = input1.com_combine_data;
-        proof.com2 = input2.com_combine_data;
-    }
-
-    static bool VerifyCombine(CombineProof const& proof, h256_t seed,
-                              VerifyCombineInput const& input1,
-                              VerifyCombineInput const& input2) {
-        Tick tick(__FN__);
-        assert(input1.m1 == input2.m1 && input1.m2 == input2.m2);
-        assert(input1.n1 == input2.n1 && input1.n2 == input2.n2);
-
-        std::vector<Fr> vec_e(1);
-        ComputeFst(seed, "combine e", vec_e);
-        Fr e = vec_e[0];
-
-        std::vector<G1> com_data = input1.com_data * e + input2.com_data;
-        G1 com_combine_data = input1.com_combine_data * e + input2.com_combine_data;
-        
-        std::vector<std::vector<Fr>> r(com_data.size());
-        std::vector<Fr> combine_r;
-        
-        for(size_t i=0; i<com_data.size(); i++){
-            if(i < input1.m1){
-                r[i].resize(input1.n1);
-            }else{
-                r[i].resize(input1.n2);
-            }
-            ComputeFst(seed, "combine r " + std::to_string(i), r[i]);
-            combine_r.insert(combine_r.end(), r[i].begin(), r[i].end());
-        }
-
-        std::vector<std::vector<Fr>> &b = r;
-        b.push_back(-combine_r);
-
-        std::vector<G1> &com_a = com_data;
-        com_a.push_back(com_combine_data);
-
-        argument::A4::CommitmentPub a4_pub(com_a, G1Zero());
-        argument::A4::VerifyInput a4_in(b, a4_pub, pc::kGetRefG1, pc::kGetRefG1(0));
-        return argument::A4::Verify(proof.sub_proof, seed, a4_in);
-    }
-
-    static void EnvProve(h256_t seed, EnvProof& proof,
-                          ProveEnvInput const& input){
-        Tick tick(__FN__);
-        namespace fp = circuit::fp;
-        std::vector<G1> com_w(input.s);
-        std::vector<Fr> com_w_r(input.s);
-
-        std::cout << "compute com(witness)\n";
-        auto parallel_f = [&com_w_r, &com_w, &input](int64_t i) {
-            if(i == 0){ 
-                com_w_r[i] = FrZero();
-                com_w[i] = pc::ComputeSigmaG(0, input.w[0].size());
-            }else if(i < 65){
-                com_w_r[i] = input.r_com_state[i-1];
-                com_w[i] = input.com_state[i-1];
-            }else if(i < 69){
-                com_w_r[i] = input.r_com_action[i-65];
-                com_w[i] = input.com_action[i-65];
-            }else{
-                com_w_r[i] = FrRand();
-                com_w[i] = pc::ComputeCom(input.w[i], com_w_r[i], true);
-            }
-        };
-        parallel::For<int64_t>(input.s, parallel_f);
-        UpdateSeed(seed, com_w);
-
-        std::vector<std::vector<Fr>> wa, wb, wc;
-        std::vector<Fr> r_com_wa, r_com_wb, r_com_wc;
-        ComputeWitness(input.w, env_a, env_b, env_c, wa, wb, wc, com_w_r, r_com_wa, r_com_wb, r_com_wc);
-        argument::A7::CommitmentSec a7_sec(r_com_wa, r_com_wb, r_com_wc);
-        argument::A7::ProveInput a7_input(wa, wb, wc, pc::kGetRefG1);
-        argument::A7::Prove(proof.r1cs_proof, seed, a7_input, a7_sec);
-        UpdateSeed(seed, proof.r1cs_proof);
-
-        // same scalar
-        Fr r_com_a = com_w_r[input.in_index];
-        Fr r_com_b = com_w_r[input.r1cs_ret_index];
-        std::vector<Fr> x = input.w[input.r1cs_ret_index];
-        std::vector<G1> g1 = pc::CopyG(pc::kGetRefG1, input.n), g2 = g1;
-        
-        g1.erase(g1.begin(), g1.begin() + 1);
-        g2.pop_back();
-        x.pop_back();
-        
-        std::vector<Fr> y(x.size());
-        FrRand(y);
-
-        Fr r_com_1 = FrRand(), r_com_2 = FrRand();
-        proof.com1 = pc::ComputeCom(input.n-1, g1.data(), y.data(), r_com_1);
-        proof.com2 = pc::ComputeCom(input.n-1, g2.data(), y.data(), r_com_2);
-
-        UpdateSeed(seed, proof.com1, proof.com2);
-        Fr e = ComputeFst(seed, "same base");
-
-        proof.z = y + x * e;
-        proof.r_com_z1 = r_com_1 + r_com_a * e;
-        proof.r_com_z2 = r_com_2 + r_com_b * e;
-        
-        proof.com_w = std::move(com_w);
-    }
-
-    static bool EnvVerify(h256_t seed, EnvProof const& proof, VerifyEnvInput const& input){
-        Tick tick(__FN__);
-        if(proof.com_w[0] != pc::ComputeSigmaG(0, input.n)){
-            assert(false);
-            return false;
-        }
-
-        for(size_t i=0; i<64; i++){
-            if(proof.com_w[i+1] != input.com_state[i]){
-                assert(false);
-                return false;
-            }
-        }
-
-        for(size_t i=0; i<4; i++){
-            if(proof.com_w[i+65] != input.com_action[i]){
-                assert(false);
-                return false;
-            }
-        }
-
-        UpdateSeed(seed, proof.com_w);
-        bool ret = argument::A7::Verify(input.n, proof.r1cs_proof, seed, env_a, env_b, env_c, proof.com_w, pc::kGetRefG1);
-        if(!ret){
-            assert(false);
-            return false;
-        }
-        UpdateSeed(seed, proof.r1cs_proof);
-
-        // same scalar
-        std::vector<G1> g1 = pc::CopyG(pc::kGetRefG1, input.n), g2 = g1;
-        g1.erase(g1.begin(), g1.begin() + 1);
-        g2.pop_back();
-
-        G1 com_a = proof.com_w[input.in_index];
-        G1 com_b = proof.com_w[input.r1cs_ret_index] - pc::PcG(input.n-1) * (63 *circuit::fp::RationalConst<8, 24>().kFrN);
-
-        UpdateSeed(seed, proof.com1, proof.com2);
-        Fr e = ComputeFst(seed, "same base");
-
-        ret &= (proof.com1 + com_a * e == pc::ComputeCom(input.n-1, g1.data(), proof.z.data(), proof.r_com_z1));
-        ret &= (proof.com2 + com_b * e == pc::ComputeCom(input.n-1, g2.data(), proof.z.data(), proof.r_com_z2));
-        
-        if(!ret){
-            assert(false);
-            return false;
-        }
-        return true;
-    }
-
-    static void InferReluAndCommit(std::vector<std::vector<Fr>> const& in,
-                          ProveOutput & out) {
-        Tick tick(__FN__);
-        namespace fp = circuit::fp;
-        out.data.resize(in.size(), std::vector<Fr>(in[0].size()));
-        auto parallel_f = [&in, &out](size_t i){
-            size_t row = i / in[0].size(), col = i % in[0].size();
-            out.data[row][col] = fp::ReducePrecision<8, 24 * 2, 24>(in[row][col]);
-            out.data[row][col] = out.data[row][col].isNegative() ? 0 : out.data[row][col];
-        };
-        parallel::For(in.size() * in[0].size(), parallel_f);
-        ComputeOutCom(out);
-    }
-
-    static void ComputeOutCom(ProveOutput& output) {
-        Tick tick(__FN__);
-        if(output.is_row){
-            size_t m = output.data.size();
-            output.r_com_data.resize(m);
-            output.com_data.resize(m);
-            FrRand(output.r_com_data);
-            auto parallel_f = [&output](int64_t i) {
-                output.com_data[i] = pc::ComputeCom(output.data[i], output.r_com_data[i]);
-            };
-            parallel::For(m, parallel_f);
-        }else{
-            size_t m = output.data.size();
-            size_t n = output.data[0].size();
-            output.r_com_data.resize(n);
-            output.com_data.resize(n);
-            FrRand(output.r_com_data);
-            auto parallel_f = [&output, &m, &n](int64_t j) {
-                auto get_data = [&output, &j](size_t i) -> Fr const&{
-                    return output.data[i][j];
-                };
-                output.com_data[j] = pc::ComputeCom(m, get_data, output.r_com_data[j]);
-            };
-            parallel::For(n, parallel_f);
-        }
-    }
-
-    static void LoadPara(Para& para);
-
-    static void LoadState(std::vector<std::vector<Fr>> &data);
-
-    static void LoadAction(std::vector<std::vector<Fr>> &action);
-
-    static void ComputeParaCom(ParaCommitmentPub& com_pub, ParaCommitmentSec& com_sec, Para const& para);
-
-    static void ModelProve(h256_t seed, ModelProof& proof,
-                            ProveOutput const& state,
-                            ProveOutput & action,
-                            Para const& para,
-                            ParaCommitmentPub const& para_com_pub,
-                            ParaCommitmentSec const& para_com_sec);
-
-    static bool ModelVerify(h256_t seed, ModelProof const& proof, 
-                            std::vector<G1> const& com_data,
-                            ParaCommitmentPub const& para_com_pub);
-
-
-    static bool TestModel();
-
-    static bool TestEnv();
-
-    static bool Test();
+struct FrozenLake {
+  struct Para {
+    std::vector<std::vector<Fr>> dense1;
+    std::vector<std::vector<Fr>> dense2;
+    std::vector<std::vector<Fr>> dense3;
+  };
+
+  static void LoadPara(Para& para);
 };
 
 void FrozenLake::LoadPara(Para& para){
@@ -1049,396 +114,616 @@ void FrozenLake::LoadPara(Para& para){
     }
 }
 
-void FrozenLake::LoadAction(std::vector<std::vector<Fr>> &action){ //14 * 4
-    Tick tick(__FN__);
-    action.resize(14, std::vector<Fr>(4, 0));
-    action[0][1] = 1;  //1
-    action[1][2] = 1;  //2
-    action[2][2] = 1;  //2
-    action[3][2] = 1;  //2
-    action[4][2] = 1;  //2
-    action[5][2] = 1;  //2
-    action[6][1] = 1;  //1
-    action[7][2] = 1;  //2
-    action[8][1] = 1;  //1
-    action[9][1] = 1;  //1
-    action[10][2] = 1; //2
-    action[11][1] = 1; //1
-    action[12][1] = 1; //1
-    action[13][1] = 1; //1
-}
-
-void FrozenLake::LoadState(std::vector<std::vector<Fr>> &data){
-    Tick tick(__FN__);
-    size_t const D = 8, N = 24;
-    circuit::fp::RationalConst<D, N> rationalConst;
-    data.resize(14, std::vector<Fr>(64, 0));
-    data[0][0] = rationalConst.kFrN;  //1
-    data[1][8] = rationalConst.kFrN;  //2
-    data[2][9] = rationalConst.kFrN;  //2
-    data[3][10] = rationalConst.kFrN; //2
-    data[4][11] = rationalConst.kFrN; //2
-    data[5][12] = rationalConst.kFrN; //2
-    data[6][13] = rationalConst.kFrN; //1
-    data[7][21] = rationalConst.kFrN; //2
-    data[8][22] = rationalConst.kFrN; //1
-    data[9][30] = rationalConst.kFrN; //1
-    data[10][38] = rationalConst.kFrN;//2
-    data[11][39] = rationalConst.kFrN;//1
-    data[12][47] = rationalConst.kFrN;//1
-    data[13][55] = rationalConst.kFrN;//1
-}
-
-void FrozenLake::ComputeParaCom(ParaCommitmentPub& com_pub,
-                             ParaCommitmentSec& com_sec, Para const& para) {
-    Tick tick(__FN__);
-
-    com_pub.dense1.resize(65);
-    com_pub.dense2.resize(13);
-    com_pub.dense3.resize(9);
-
-    com_sec.r_dense1.resize(65);
-    com_sec.r_dense2.resize(13);
-    com_sec.r_dense3.resize(9);
-
-    FrRand(com_sec.r_dense1);
-    FrRand(com_sec.r_dense2);
-    FrRand(com_sec.r_dense3);
-
-    auto parallel_f1 = [&para, &com_sec, &com_pub](int64_t i) {
-        com_pub.dense1[i] = pc::ComputeCom(para.dense1[i], com_sec.r_dense1[i]);
-        if(i < 13){
-            com_pub.dense2[i] = pc::ComputeCom(para.dense2[i], com_sec.r_dense2[i]);
-        }
-        if(i < 9){
-            com_pub.dense3[i] = pc::ComputeCom(para.dense3[i], com_sec.r_dense3[i]);
-        }
-    };
-    parallel::For(65, parallel_f1);
-}
-
-
-// 对于一个prove, 要准备对应的proveinput, 包含: 承诺, 打开(承诺数据 + 随机数), 数据
-void FrozenLake::ModelProve(h256_t seed, ModelProof& proof,
-                            ProveOutput const& state,
-                            ProveOutput & action,
-                            Para const& para,
-                            ParaCommitmentPub const& para_com_pub,
-                            ParaCommitmentSec const& para_com_sec) {
-    Tick tick(__FN__);
-
-    // prove dense1
-    ProveDenseInput dense1_input(para.dense1, para_com_sec.r_dense1, state);
-    ProveOutput dense1_output;
-    ProveDense(proof.dense1_proof, dense1_output, seed, dense1_input);
-    UpdateSeed(seed, proof.dense1_proof);
-
-    // infer relu1
-    ProveOutput relu1_output;
-    InferReluAndCommit(dense1_output.data, relu1_output);
-    proof.relu_proof.com1 = relu1_output.com_data;
-
-    // prove dense2
-    ProveDenseInput dense2_input(para.dense2, para_com_sec.r_dense2, relu1_output);
-    ProveOutput dense2_output;
-    ProveDense(proof.dense2_proof, dense2_output, seed, dense2_input);
-    UpdateSeed(seed, proof.dense2_proof);
-
-    // infer relu2
-    ProveOutput relu2_output;
-    InferReluAndCommit(dense2_output.data, relu2_output);
-    proof.relu_proof.com2 = relu2_output.com_data;
-
-    // prove dense3
-    ProveDenseInput dense3_input(para.dense3, para_com_sec.r_dense3, relu2_output);
-    ProveOutput dense3_output(false);
-    ProveDense(proof.dense3_proof, dense3_output, seed, dense3_input);
-    UpdateSeed(seed, proof.dense3_proof);
-
-    // prove combine
-    ProveCombineInput combine1_input(dense1_output, dense2_output);
-    ProveCombineInput combine2_input(relu1_output, relu2_output);
-    ProveCombine(proof.combine_proof, seed, combine1_input, combine2_input);
-    UpdateSeed(seed, proof.combine_proof);
-
-    //prove relu
-    ProveRelu2Input dense1_relu_input(
-            combine1_input.combine_data, combine1_input.r_com_combine_data, combine1_input.com_combine_data,
-            combine2_input.combine_data, combine2_input.r_com_combine_data, combine2_input.com_combine_data
-    );
-    ProveRelu2(proof.relu_proof, seed, dense1_relu_input);
-    UpdateSeed(seed, proof.relu_proof);
-
-    // max
-    ProveMax2Input max_input(dense3_output);
-    ProveOutput max_output;
-    ProveMax2(proof.max_proof, max_output, action, seed, max_input);
-    UpdateSeed(seed, proof.max_proof);
-
-    misc::PrintVector(max_output.data[0]);
-    misc::PrintVector(action.data);
-}
-
-bool FrozenLake::ModelVerify(h256_t seed,
-                             ModelProof const& proof, 
-                             std::vector<G1> const& com_data,
-                             ParaCommitmentPub const& para_com_pub){
-    Tick tick(__FN__);
-
-    // verify dense1, 输入为列承诺
-    VerifyDenseInput dense1_input(14, para_com_pub.n1(), com_data, para_com_pub.dense1, false);
-    if (!VerifyDense(proof.dense1_proof, seed, dense1_input, dense1_input.is_row, true)) {
-      assert(false);
-      return false;
-    }
-    UpdateSeed(seed, proof.dense1_proof);
+/**
+ * Performance statistics for IteratedFunctionProof
+ */
+struct IteratedFunctionProofStats {
+    size_t max_steps;
+    size_t num_instances;
+    size_t num_constraints;
+    size_t num_vars;
+    double trajectory_gen_ms;
+    double matrix_transpose_ms;
+    double compute_com_ms;
+    double prove_ms;
+    double verify_ms;
+    double total_ms;
+    size_t proof_fr_size;
+    size_t proof_g1_size;
+    bool verify_success;
+    double peak_memory_mb;
+    // New fields
+    size_t com_g1_count;
+    size_t com_serialized_size;
+    size_t proof_serialized_size;
+    size_t total_proof_size;  // com_serialized_size + proof_serialized_size
+    double prove_total_ms;
+    double verify_total_ms;
     
-    // verify dense2
-    VerifyDenseInput dense2_input(proof.dense1_proof.com.size(), para_com_pub.n2(), proof.relu_proof.com1, para_com_pub.dense2);
-    if (!VerifyDense(proof.dense2_proof, seed, dense2_input)) {
-      assert(false);
-      return false;
+    std::string to_csv_header() const {
+        return "max_steps,num_instances,num_constraints,num_vars,"
+               "trajectory_gen_ms,matrix_transpose_ms,compute_com_ms,"
+               "prove_ms,verify_ms,total_ms,proof_fr_size,proof_g1_size,"
+               "verify_success,peak_memory_mb,"
+               "com_g1_count,com_serialized_size,proof_serialized_size,total_proof_size,"
+               "prove_total_ms,verify_total_ms";
     }
-    UpdateSeed(seed, proof.dense2_proof);
-
-    // verify dense3
-    VerifyDenseInput dense3_input(proof.dense2_proof.com.size(), para_com_pub.n3(), proof.relu_proof.com2, para_com_pub.dense3);
-    if (!VerifyDense(proof.dense3_proof, seed, dense3_input, dense3_input.is_row, false)) {
-      assert(false);
-      return false;
+    
+    std::string to_csv() const {
+        std::stringstream ss;
+        ss << max_steps << ","
+           << num_instances << ","
+           << num_constraints << ","
+           << num_vars << ","
+           << std::fixed << std::setprecision(2)
+           << trajectory_gen_ms << ","
+           << matrix_transpose_ms << ","
+           << compute_com_ms << ","
+           << prove_ms << ","
+           << verify_ms << ","
+           << total_ms << ","
+           << proof_fr_size << ","
+           << proof_g1_size << ","
+           << verify_success << ","
+           << peak_memory_mb << ","
+           << com_g1_count << ","
+           << com_serialized_size << ","
+           << proof_serialized_size << ","
+           << total_proof_size << ","
+           << prove_total_ms << ","
+           << verify_total_ms;
+        return ss.str();
     }
-    UpdateSeed(seed, proof.dense3_proof);
-
-    // verify combine
-    VerifyCombineInput combine1_input(para_com_pub.n1(), para_com_pub.n2(), proof.dense1_proof.com, proof.dense2_proof.com, proof.combine_proof.com1);
-    VerifyCombineInput combine2_input(para_com_pub.n1(), para_com_pub.n2(), proof.relu_proof.com1, proof.relu_proof.com2, proof.combine_proof.com2);
-     if (!VerifyCombine(proof.combine_proof, seed, combine1_input, combine2_input)) {
-      assert(false);
-      return false;
+    
+    void print() const {
+        std::cout << "\n========== Performance Statistics ==========\n";
+        std::cout << "max_steps:         " << max_steps << "\n";
+        std::cout << "num_instances:     " << num_instances << "\n";
+        std::cout << "num_constraints:   " << num_constraints << "\n";
+        std::cout << "num_vars:          " << num_vars << "\n";
+        std::cout << "--------------------------------------------\n";
+        std::cout << std::fixed << std::setprecision(2);
+        std::cout << "trajectory_gen:    " << trajectory_gen_ms << " ms\n";
+        std::cout << "matrix_transpose:  " << matrix_transpose_ms << " ms\n";
+        std::cout << "compute_com:       " << compute_com_ms << " ms\n";
+        std::cout << "prove:             " << prove_ms << " ms\n";
+        std::cout << "verify:            " << verify_ms << " ms\n";
+        std::cout << "total:             " << total_ms << " ms\n";
+        std::cout << "--------------------------------------------\n";
+        std::cout << "prove_total:       " << prove_total_ms << " ms (trajectory_gen + compute_com + prove)\n";
+        std::cout << "verify_total:      " << verify_total_ms << " ms\n";
+        std::cout << "--------------------------------------------\n";
+        std::cout << "com_g1_count:      " << com_g1_count << "\n";
+        std::cout << "com_size:          " << com_serialized_size << " bytes\n";
+        std::cout << "proof_fr_size:     " << proof_fr_size << "\n";
+        std::cout << "proof_g1_size:     " << proof_g1_size << "\n";
+        std::cout << "proof_size:        " << proof_serialized_size << " bytes\n";
+        std::cout << "total_proof_size:  " << total_proof_size << " bytes (com + proof)\n";
+        std::cout << "verify_success:    " << (verify_success ? "true" : "false") << "\n";
+        std::cout << "peak_memory:       " << peak_memory_mb << " MB\n";
+        std::cout << "============================================\n\n";
     }
-    UpdateSeed(seed, proof.combine_proof);
+};
 
-    // verify relu
-    VerifyRelu2Input relu_input(
-        dense1_input.m * dense1_input.n + dense1_input.m * dense2_input.n, 
-        proof.combine_proof.com1, proof.combine_proof.com2
-    );
-    if (!VerifyRelu2(proof.relu_proof, seed, relu_input)) {
-      assert(false);
-      return false;
+/**
+ * Helper: allocate weight pb_variable_array and assign values from Para matrix.
+ * Para format: para[i][j] where i=0..in_dim (last row is bias), j=0..out_dim-1
+ * DqnGadget flat format: flat[j * (in_dim+1) + i] = para[i][j]
+ */
+inline void AllocateAndAssignWeights(
+    libsnark::protoboard<Fr>& pb,
+    libsnark::pb_variable_array<Fr>& weight_vars,
+    std::vector<std::vector<Fr>> const& para_weights,
+    const std::string& prefix) {
+    size_t in_plus_bias = para_weights.size();
+    size_t out_dim = para_weights[0].size();
+    size_t total = out_dim * in_plus_bias;
+    weight_vars.allocate(pb, total, prefix);
+    for (size_t j = 0; j < out_dim; ++j) {
+        for (size_t i = 0; i < in_plus_bias; ++i) {
+            pb.val(weight_vars[j * in_plus_bias + i]) = para_weights[i][j];
+        }
     }
-    UpdateSeed(seed, proof.relu_proof);
-
-    // ProveMax2Input()
-    VerifyMax2Input max_input(dense1_input.m, proof.dense3_proof.com);
-    if (!VerifyMax2(proof.max_proof, seed, max_input)) {
-      assert(false);
-      return false;
-    }
-    UpdateSeed(seed, proof.max_proof);
-                                      
-    return true;
-}
-
-bool FrozenLake::TestEnv() {
-    Tick tick(__FN__);
-
-    std::vector<std::vector<Fr>> state(14, std::vector<Fr>(64, 0)); //col
-    std::vector<std::vector<Fr>> action(14, std::vector<Fr>(4, 0)); //row
-
-    ProveOutput out1(false), out2(false);
-    LoadState(out1.data);
-    LoadAction(out2.data);
-
-    ComputeOutCom(out1);
-    ComputeOutCom(out2);
-
-    auto seed = misc::RandH256();
-
-    EnvProof proof;
-    ProveEnvInput prove_input(out1, out2);
-    EnvProve(seed, proof, prove_input);
-
-#ifndef DISABLE_SERIALIZE_CHECK
-    // serializeto buffer
-    yas::mem_ostream os;
-    yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-    oa.serialize(proof);
-    std::cout << "proof size: " << os.get_shared_buffer().size << "\n";
-    // serialize from buffer
-    yas::mem_istream is(os.get_intrusive_buffer());
-    yas::binary_iarchive<yas::mem_istream, YasBinF()> ia(is);
-    EnvProof proof2;
-    ia.serialize(proof2);
-    if (proof != proof2) {
-      assert(false);
-      std::cout << "oops, serialize check failed\n";
-      return false;
-    }
-#endif
-    VerifyEnvInput verify_input(state.size(), out1.com_data, out2.com_data);
-    bool success = EnvVerify(seed, proof, verify_input);
-
-    std::cout << "success:" << success << "\n";
-    return success;
 }
 
 /**
- * 测试模型推理的正确性
+ * Helper: create DqnEnvGadget with input state pack and weight variables allocated.
+ * Returns the gadget; in_state_pack and weight_vars are output parameters.
  */
-bool FrozenLake::TestModel() {
-    Tick tick(__FN__);
+inline std::unique_ptr<circuit::frozenlake::DqnEnvGadget> CreateDqnEnvGadget(
+    libsnark::protoboard<Fr>& pb,
+    FrozenLake::Para const& para,
+    libsnark::pb_variable<Fr>& in_state_pack,
+    libsnark::pb_variable_array<Fr>& dense1_vars,
+    libsnark::pb_variable_array<Fr>& dense2_vars,
+    libsnark::pb_variable_array<Fr>& dense3_vars,
+    const std::string& prefix) {
+    in_state_pack.allocate(pb, prefix + " in_state_pack");
+    dense1_vars.allocate(pb, ::circuit::frozenlake::DqnGadget::dense1_weight_size(), prefix + " dense1_w");
+    dense2_vars.allocate(pb, ::circuit::frozenlake::DqnGadget::dense2_weight_size(), prefix + " dense2_w");
+    dense3_vars.allocate(pb, ::circuit::frozenlake::DqnGadget::dense3_weight_size(), prefix + " dense3_w");
+    return std::make_unique<::circuit::frozenlake::DqnEnvGadget>(
+        pb, in_state_pack, dense1_vars, dense2_vars, dense3_vars, prefix);
+}
 
-    std::unique_ptr<Para> para(new Para);
-    LoadPara(*para);
+/**
+ * Helper: assign weight values from Para to pre-allocated weight variables.
+ */
+inline void AssignWeights(
+    libsnark::protoboard<Fr>& pb,
+    libsnark::pb_variable_array<Fr> const& weight_vars,
+    std::vector<std::vector<Fr>> const& para_weights) {
+    size_t in_plus_bias = para_weights.size();
+    size_t out_dim = para_weights[0].size();
+    for (size_t j = 0; j < out_dim; ++j) {
+        for (size_t i = 0; i < in_plus_bias; ++i) {
+            pb.val(weight_vars[j * in_plus_bias + i]) = para_weights[i][j];
+        }
+    }
+}
 
-    std::vector<std::vector<Fr>> state;
-    LoadState(state); //状态
+/**
+ * Test the full iterated function R1CS proof using A12 protocol.
+ * Auto-generates a trajectory by running DQN inference from state 0,
+ * using each step's output as the next step's input.
+ * Extracts R1CS matrices, constructs the Z matrix, and runs A12 prove/verify.
+ */
+inline void IteratedFunctionProof(size_t max_steps) {
+    IteratedFunctionProofStats stats;
+    auto total_start = std::chrono::high_resolution_clock::now();
 
-    ProveOutput output_state(false), output_action;
-    output_state.data = state;
-    ComputeOutCom(output_state);
+    FrozenLake::Para para;
+    FrozenLake::LoadPara(para);
 
-    std::unique_ptr<ParaCommitmentPub> para_com_pub(new ParaCommitmentPub); // commitment
-    std::unique_ptr<ParaCommitmentSec> para_com_sec(new ParaCommitmentSec); // rnd
-    ComputeParaCom(*para_com_pub, *para_com_sec, *para);
+    // ========== 1. Create protoboard and gadget ==========
+    libsnark::protoboard<Fr> pb;
+    libsnark::pb_variable<Fr> in_state_pack;
+    libsnark::pb_variable_array<Fr> dense1_vars, dense2_vars, dense3_vars;
+    auto gadget_ptr = CreateDqnEnvGadget(pb, para, in_state_pack, dense1_vars, dense2_vars, dense3_vars, "DqnEnvGadget");
+    auto& gadget = *gadget_ptr;
 
-    auto seed = misc::RandH256();
+    int64_t num_constraints = pb.num_constraints();
+    int64_t num_variables = pb.num_variables();
 
-    ModelProof proof;
-    ModelProve(seed, proof, output_state, output_action, *para, *para_com_pub, *para_com_sec);
+    stats.num_constraints = num_constraints;
+    stats.num_vars = num_variables + 1;  // +1 for constant 1
 
-#ifndef DISABLE_SERIALIZE_CHECK
-    // serializeto buffer
-    yas::mem_ostream os;
-    yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-    oa.serialize(proof);
-    std::cout << "proof size: " << os.get_shared_buffer().size << "\n";
-    // serialize from buffer
-    yas::mem_istream is(os.get_intrusive_buffer());
-    yas::binary_iarchive<yas::mem_istream, YasBinF()> ia(is);
-    ModelProof proof2;
-    ia.serialize(proof2);
-    if (proof != proof2) {
-      assert(false);
-      std::cout << "oops, serialize check failed\n";
-      return false;
+    size_t in_idx = gadget.in_pack_index();
+    size_t out_idx = gadget.out_pack_index();
+
+    std::cout << "R1CS: " << num_constraints << " constraints, " << num_variables << " variables\n";
+    std::cout << "in_idx: " << in_idx << ", out_idx: " << out_idx << "\n";
+
+    // ========== 1.5 Separate DQN and Env constraint counting ==========
+    {
+      // DQN only protoboard
+      libsnark::protoboard<Fr> pb_dqn;
+      libsnark::pb_variable_array<Fr> dqn_in_state;
+      dqn_in_state.allocate(pb_dqn, 64, "dqn_in_state");
+      libsnark::pb_variable_array<Fr> dqn_w1, dqn_w2, dqn_w3;
+      dqn_w1.allocate(pb_dqn, circuit::frozenlake::DqnGadget::dense1_weight_size(), "dqn_w1");
+      dqn_w2.allocate(pb_dqn, circuit::frozenlake::DqnGadget::dense2_weight_size(), "dqn_w2");
+      dqn_w3.allocate(pb_dqn, circuit::frozenlake::DqnGadget::dense3_weight_size(), "dqn_w3");
+      circuit::frozenlake::DqnGadget dqn_only(pb_dqn, dqn_in_state, dqn_w1, dqn_w2, dqn_w3, "DqnOnly");
+      size_t dqn_constraints = pb_dqn.num_constraints();
+      size_t dqn_variables = pb_dqn.num_variables();
+
+      // Env only protoboard
+      libsnark::protoboard<Fr> pb_env;
+      libsnark::pb_variable_array<Fr> env_in_state;
+      env_in_state.allocate(pb_env, 64, "env_in_state");
+      libsnark::pb_variable_array<Fr> env_action;
+      env_action.allocate(pb_env, 4, "env_action");
+      libsnark::pb_variable<Fr> env_in_pack;
+      env_in_pack.allocate(pb_env, "env_in_pack");
+      circuit::frozenlake::EnvGadget env_only(pb_env, env_in_state, env_action, env_in_pack, "EnvOnly");
+      size_t env_constraints = pb_env.num_constraints();
+      size_t env_variables = pb_env.num_variables();
+
+      std::cout << "\n========== Circuit Component Statistics ==========\n";
+      std::cout << "DQN (Neural Network Inference):\n";
+      std::cout << "  Constraints: " << dqn_constraints << "\n";
+      std::cout << "  Variables:   " << dqn_variables << "\n";
+      std::cout << "Env (State Transition):\n";
+      std::cout << "  Constraints: " << env_constraints << "\n";
+      std::cout << "  Variables:   " << env_variables << "\n";
+      std::cout << "Total (DQN + Env + onehot packing):\n";
+      std::cout << "  Constraints: " << (dqn_constraints + env_constraints) << " (plus packing constraints)\n";
+      std::cout << "  Variables:   " << (dqn_variables + env_variables) << " (plus shared variables)\n";
+      std::cout << "==================================================\n\n";
+    }
+
+    // ========== 2. Generate trajectory ==========
+    auto traj_start = std::chrono::high_resolution_clock::now();
+    std::vector<std::vector<Fr>> row_z;
+    int state = 0;
+
+    // Reuse the protoboard created in step 1; assign weights once
+    AssignWeights(pb, dense1_vars, para.dense1);
+    AssignWeights(pb, dense2_vars, para.dense2);
+    AssignWeights(pb, dense3_vars, para.dense3);
+
+    for (size_t step = 0; step < max_steps; ++step) {
+        gadget.Assign(state);
+        assert(pb.is_satisfied());
+
+        // Collect current step's full assignment vector
+        auto const& full_assignment = pb.full_variable_assignment();
+        std::vector<Fr> assignment(num_variables + 1);
+        assignment[0] = FrOne();
+        for (int64_t i = 0; i < num_variables; ++i) {
+            assignment[i + 1] = full_assignment[i];
+        }
+        row_z.push_back(assignment);
+
+#ifdef DEBUG
+        std::cout << "Step " << step << ": " << pb.val(gadget.in_pack()).getInt64()
+                  << " -> " << pb.val(gadget.out_pack()).getInt64() << "\n";
+#endif
+        state = (int)pb.val(gadget.out_pack()).getInt64();
+    }
+    auto traj_end = std::chrono::high_resolution_clock::now();
+    stats.trajectory_gen_ms = std::chrono::duration<double, std::milli>(traj_end - traj_start).count();
+
+    stats.num_instances = row_z.size();
+    std::cout << "Generated " << stats.num_instances << " valid steps.\n";
+    CHECK(stats.num_instances >= 2, "Need at least 2 steps for A12 proof");
+
+    // ========== 3. Transpose assignment matrix ==========
+    std::cout << "\nTransposing assignment matrix...\n";
+    auto transpose_start = std::chrono::high_resolution_clock::now();
+    FlatMatrix flat_row_z(num_variables + 1, stats.num_instances);
+    // Optimization: Use blocked transpose for better cache locality
+    constexpr int64_t BLOCK_SIZE = 64;
+    int64_t total_rows = num_variables + 1;
+    int64_t n_inst = (int64_t)stats.num_instances;
+    int64_t num_blocks = (total_rows + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    auto transpose_block = [&](int64_t block) {
+        int64_t row_start = block * BLOCK_SIZE;
+        int64_t row_end = std::min(row_start + BLOCK_SIZE, total_rows);
+        for (int64_t j = 0; j < n_inst; ++j) {
+            for (int64_t i = row_start; i < row_end; ++i) {
+                flat_row_z(i, j) = row_z[j][i];
+            }
+        }
+    };
+    parallel::For(num_blocks, transpose_block);
+    { std::vector<std::vector<Fr>>().swap(row_z); }
+    auto transpose_end = std::chrono::high_resolution_clock::now();
+    stats.matrix_transpose_ms = std::chrono::duration<double, std::milli>(transpose_end - transpose_start).count();
+    std::cout << "Transpose time: " << stats.matrix_transpose_ms << "ms\n";
+
+    // ========== 4. Extract sparse R1CS matrices ==========
+    std::cout << "\nExtracting sparse R1CS matrices...\n";
+    auto extract_start = std::chrono::high_resolution_clock::now();
+    SparseMatrix sparse_a, sparse_b, sparse_c;
+    circuit::PreprocessSparse(pb, sparse_a, sparse_b, sparse_c);
+    auto extract_end = std::chrono::high_resolution_clock::now();
+    std::cout << "Extract time: " << std::chrono::duration<double, std::milli>(extract_end - extract_start).count() << "ms\n";
+
+    // ========== 5. Build copy constraint ranges ==========
+    std::vector<argument::CopyRange> copy_ranges = {
+        argument::CopyRange(out_idx, in_idx, 1)  // State copy: out[i] -> in[i+1]
+    };
+
+#ifdef DEBUG
+    // ========== 5.5 DEBUG: Verify R1CS and copy constraints before proving ==========
+    {
+      std::cout << "\n=== DEBUG: Checking R1CS satisfaction and copy constraints ===\n";
+      int64_t n_vars_val = num_variables + 1;
+      int64_t m_val = sparse_a.rows();
+      int64_t n_inst_val = (int64_t)stats.num_instances;
+      bool all_ok = true;
+
+      // Check R1CS: (A * z_j) o (B * z_j) = C * z_j for each instance j
+      for (int64_t j = 0; j < n_inst_val; ++j) {
+        std::vector<Fr> col_j = flat_row_z.col(j);
+
+        // Compute A*z_j, B*z_j, C*z_j using sparse matrices
+        std::vector<Fr> az(m_val, FrZero());
+        std::vector<Fr> bz(m_val, FrZero());
+        std::vector<Fr> cz(m_val, FrZero());
+        for (int64_t i = 0; i < m_val; ++i) {
+          for (int64_t k = sparse_a.row_ptr_[i]; k < sparse_a.row_ptr_[i + 1]; ++k)
+            az[i] += sparse_a.values_[k] * col_j[sparse_a.col_idx_[k]];
+          for (int64_t k = sparse_b.row_ptr_[i]; k < sparse_b.row_ptr_[i + 1]; ++k)
+            bz[i] += sparse_b.values_[k] * col_j[sparse_b.col_idx_[k]];
+          for (int64_t k = sparse_c.row_ptr_[i]; k < sparse_c.row_ptr_[i + 1]; ++k)
+            cz[i] += sparse_c.values_[k] * col_j[sparse_c.col_idx_[k]];
+        }
+
+        for (int64_t i = 0; i < m_val; ++i) {
+          if (az[i] * bz[i] != cz[i]) {
+            std::cout << "  R1CS FAILED: instance " << j << ", constraint " << i
+                      << " (az*bz != cz)\n";
+            all_ok = false;
+            break;  // report first failure per instance
+          }
+        }
+      }
+      if (all_ok) std::cout << "  R1CS check: PASSED for all " << n_inst_val << " instances\n";
+
+      // Check copy constraints: z_j[out_idx] == z_{j+1}[in_idx]
+      bool copy_ok = true;
+      for (int64_t j = 0; j < n_inst_val - 1; ++j) {
+        for (auto const& cr : copy_ranges) {
+          for (int64_t k = 0; k < cr.l; ++k) {
+            Fr src = flat_row_z(cr.l_a + k, j);
+            Fr dst = flat_row_z(cr.l_b + k, j + 1);
+            if (src != dst) {
+              std::cout << "  COPY CONSTRAINT FAILED: z_" << j << "[" << (cr.l_a + k)
+                        << "] != z_" << (j + 1) << "[" << (cr.l_b + k) << "]\n";
+              std::cout << "    src = " << src.getStr() << "\n    dst = " << dst.getStr() << "\n";
+              copy_ok = false;
+            }
+          }
+        }
+      }
+      if (copy_ok) std::cout << "  Copy constraint check: PASSED for all " << (n_inst_val - 1) << " pairs\n";
+
+      std::cout << "=== DEBUG check complete ===\n\n";
+      CHECK(all_ok && copy_ok, "DEBUG_CHECK: R1CS or copy constraint check failed");
     }
 #endif
-    bool success = ModelVerify(seed, proof, output_state.com_data, *para_com_pub);
-    std::cout << "success:" << success << "\n";
-    return success;
+
+    // ========== 6. A12 prove/verify ==========
+    std::cout << "\n=== Generating A12 Iterative Proof ===\n";
+    
+    h256_t proof_seed = misc::RandH256();
+    argument::A12::SparseProveInput prove_input(
+        sparse_a, sparse_b, sparse_c, flat_row_z, copy_ranges, pc::kGetRefG1);
+    
+    auto prove_total_start = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Computing commitments...\n";
+    auto com_start = std::chrono::high_resolution_clock::now();
+    argument::A12::CommitmentPub com_pub;
+    argument::A12::CommitmentSec com_sec;
+    argument::A12::ComputeCom(com_pub, com_sec, prove_input);
+    auto com_end = std::chrono::high_resolution_clock::now();
+    stats.compute_com_ms = std::chrono::duration<double, std::milli>(com_end - com_start).count();
+    std::cout << "Commitment time: " << stats.compute_com_ms << "ms\n";
+    
+    stats.com_g1_count = com_pub.com_z.size();
+    
+    std::cout << "Generating proof...\n";
+    auto prove_start = std::chrono::high_resolution_clock::now();
+    argument::A12::Proof proof;
+    argument::A12::ProveIf(proof, proof_seed, prove_input, com_pub, com_sec);
+    auto prove_end = std::chrono::high_resolution_clock::now();
+    stats.prove_ms = std::chrono::duration<double, std::milli>(prove_end - prove_start).count();
+    std::cout << "Prove time: " << stats.prove_ms << "ms\n";
+    
+    auto prove_total_end = std::chrono::high_resolution_clock::now();
+    stats.prove_total_ms = stats.trajectory_gen_ms +
+        std::chrono::duration<double, std::milli>(prove_total_end - prove_total_start).count();
+    
+    stats.proof_fr_size = proof.FrSize();
+    stats.proof_g1_size = proof.G1Size();
+    
+    // Serialize commitment to get size
+    yas::mem_ostream com_os;
+    yas::binary_oarchive<yas::mem_ostream, YasBinF()> com_oa(com_os);
+    com_oa.serialize(com_pub);
+    stats.com_serialized_size = com_os.get_shared_buffer().size;
+    
+    // Serialize proof to get size
+    yas::mem_ostream proof_os;
+    yas::binary_oarchive<yas::mem_ostream, YasBinF()> proof_oa(proof_os);
+    proof_oa.serialize(proof);
+    stats.proof_serialized_size = proof_os.get_shared_buffer().size;
+    
+    stats.total_proof_size = stats.com_serialized_size + stats.proof_serialized_size;
+    
+    // A12 verify
+    std::cout << "\nVerifying proof...\n";
+    auto verify_total_start = std::chrono::high_resolution_clock::now();
+    auto verify_start = std::chrono::high_resolution_clock::now();
+    argument::A12::SparseVerifyInput verify_input(
+        sparse_a, sparse_b, sparse_c, com_pub, stats.num_instances, copy_ranges, pc::kGetRefG1);
+    stats.verify_success = argument::A12::VerifyIf(proof, proof_seed, verify_input);
+    auto verify_end = std::chrono::high_resolution_clock::now();
+    stats.verify_ms = std::chrono::duration<double, std::milli>(verify_end - verify_start).count();
+    auto verify_total_end = std::chrono::high_resolution_clock::now();
+    stats.verify_total_ms = std::chrono::duration<double, std::milli>(verify_total_end - verify_total_start).count();
+    
+    std::cout << "Verify time: " << stats.verify_ms << "ms\n";
+    std::cout << "Verify result: " << (stats.verify_success ? "SUCCESS" : "FAILED") << "\n";
+    
+    auto total_end = std::chrono::high_resolution_clock::now();
+    stats.total_ms = std::chrono::duration<double, std::milli>(total_end - total_start).count();
+    
+    stats.max_steps = max_steps;
+    stats.peak_memory_mb = misc::GetPeakMemoryByPid(getpid()) / 1024.0;
+    
+    CHECK(stats.verify_success, "A12 verify failed");
+    
+    stats.print();
 }
 
-bool FrozenLake::Test() {
-    Tick tick(__FN__);
+/**
+ * Test the full iterated function R1CS proof with detailed performance output.
+ * Returns the performance statistics for benchmarking.
+ */
+inline IteratedFunctionProofStats IteratedFunctionProofWithStats(size_t max_steps, bool verbose = true) {
+    IteratedFunctionProofStats stats;
+    auto total_start = std::chrono::high_resolution_clock::now();
 
-    size_t block_len = 7;
+    FrozenLake::Para para;
+    FrozenLake::LoadPara(para);
 
-    std::unique_ptr<Para> para(new Para);
-    LoadPara(*para);
+    // ========== 1. Create protoboard and gadget ==========
+    libsnark::protoboard<Fr> pb;
+    libsnark::pb_variable<Fr> in_state_pack;
+    libsnark::pb_variable_array<Fr> dense1_vars, dense2_vars, dense3_vars;
+    auto gadget_ptr = CreateDqnEnvGadget(pb, para, in_state_pack, dense1_vars, dense2_vars, dense3_vars, "DqnEnvGadget");
+    auto& gadget = *gadget_ptr;
 
-    std::vector<std::vector<Fr>> state; //col
-    LoadState(state); //状态
+    int64_t num_constraints = pb.num_constraints();
+    int64_t num_variables = pb.num_variables();
 
-    ProveOutput output_state(false), output_action;
-    output_state.data = state;
-    ComputeOutCom(output_state);
+    stats.num_constraints = num_constraints;
+    stats.num_vars = num_variables + 1;  // +1 for constant 1
 
-    std::unique_ptr<ParaCommitmentPub> para_com_pub(new ParaCommitmentPub); // commitment
-    std::unique_ptr<ParaCommitmentSec> para_com_sec(new ParaCommitmentSec); // rnd
-    ComputeParaCom(*para_com_pub, *para_com_sec, *para);
+    size_t in_idx = gadget.in_pack_index();
+    size_t out_idx = gadget.out_pack_index();
 
-    Message msg;
-    Pod::Secret secret;
-    auto seed = misc::RandH256();
-    Pod::CommitedData commited_data, commited_cph;
-
-    {
-        Tick tick("Server Time");
-        // 推理证明
-        ModelProve(seed, msg.mdl_proof, output_state, output_action, *para, *para_com_pub, *para_com_sec);
-
-        // 答案有效性证明
-        ProveEnvInput prove_input(output_state, output_action);
-        EnvProve(seed, msg.env_proof, prove_input);
-        commited_data.d = output_action.data.back();
-        commited_data.com_d = output_action.com_data.back();
-        commited_data.r_com_d = output_action.r_com_data.back();
-        misc::PrintVector(commited_data.d);
-
-        // 加密证明
-        Pod::EncryptAndProve(msg.mimc_proof, seed, secret, commited_cph, commited_data);
-        msg.enc_action = commited_cph.d + commited_data.d;
-        msg.r_enc_action = commited_cph.r_com_d + commited_data.r_com_d;
-
-        // 密钥交易
-        Pod::KeyProve(msg.key_proof, seed, secret, block_len);
+    if (verbose) {
+        std::cout << "R1CS: " << num_constraints << " constraints, " << num_variables << " variables\n";
+        std::cout << "in_idx: " << in_idx << ", out_idx: " << out_idx << "\n";
     }
 
-#ifndef DISABLE_SERIALIZE_CHECK
-    // serializeto buffer
-    yas::mem_ostream os;
-    yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-    oa.serialize(msg);
-    std::cout << "msg size: " << os.get_shared_buffer().size << "\n";
-    // serialize from buffer
-    yas::mem_istream is(os.get_intrusive_buffer());
-    yas::binary_iarchive<yas::mem_istream, YasBinF()> ia(is);
-    Message msg2;
-    ia.serialize(msg2);
-    if (msg != msg2) {
-      assert(false);
-      std::cout << "oops, serialize check failed\n";
-      return false;
+    // ========== 2. Generate trajectory ==========
+    auto traj_start = std::chrono::high_resolution_clock::now();
+    std::vector<std::vector<Fr>> row_z;
+    int state = 0;
+
+    // Reuse the protoboard created in step 1; assign weights once
+    AssignWeights(pb, dense1_vars, para.dense1);
+    AssignWeights(pb, dense2_vars, para.dense2);
+    AssignWeights(pb, dense3_vars, para.dense3);
+
+    for (size_t step = 0; step < max_steps; ++step) {
+        gadget.Assign(state);
+        if (!pb.is_satisfied()) break;
+
+        // Collect current step's full assignment vector
+        auto const& full_assignment = pb.full_variable_assignment();
+        std::vector<Fr> assignment(num_variables + 1);
+        assignment[0] = FrOne();
+        for (int64_t i = 0; i < num_variables; ++i) {
+            assignment[i + 1] = full_assignment[i];
+        }
+        row_z.push_back(assignment);
+
+        if (verbose) {
+            std::cout << "Step " << step << ": " << pb.val(gadget.in_pack()).getInt64()
+                      << " -> " << pb.val(gadget.out_pack()).getInt64() << "\n";
+        }
+        state = (int)pb.val(gadget.out_pack()).getInt64();
+    }
+    auto traj_end = std::chrono::high_resolution_clock::now();
+    stats.trajectory_gen_ms = std::chrono::duration<double, std::milli>(traj_end - traj_start).count();
+
+    stats.num_instances = row_z.size();
+    if (verbose) {
+        std::cout << "Generated " << stats.num_instances << " valid steps.\n";
+    }
+    
+    if (stats.num_instances < 2) {
+        std::cerr << "Error: Need at least 2 steps for A12 proof\n";
+        return stats;
     }
 
-    {
-        yas::mem_ostream os;
-        yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-        oa.serialize(msg.mdl_proof);
-        std::cout << "model proof size: " << os.get_shared_buffer().size << "\n";
+    // ========== 3. Transpose assignment matrix ==========
+    if (verbose) std::cout << "\nTransposing assignment matrix...\n";
+    auto transpose_start = std::chrono::high_resolution_clock::now();
+    FlatMatrix flat_row_z(num_variables + 1, stats.num_instances);
+    // Optimization: Use blocked transpose for better cache locality
+    constexpr int64_t BLOCK_SIZE = 64;
+    int64_t total_rows = num_variables + 1;
+    int64_t n_inst = (int64_t)stats.num_instances;
+    int64_t num_blocks = (total_rows + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    auto transpose_block = [&](int64_t block) {
+        int64_t row_start = block * BLOCK_SIZE;
+        int64_t row_end = std::min(row_start + BLOCK_SIZE, total_rows);
+        for (int64_t j = 0; j < n_inst; ++j) {
+            for (int64_t i = row_start; i < row_end; ++i) {
+                flat_row_z(i, j) = row_z[j][i];
+            }
+        }
+    };
+    parallel::For(num_blocks, transpose_block);
+    { std::vector<std::vector<Fr>>().swap(row_z); }
+    auto transpose_end = std::chrono::high_resolution_clock::now();
+    stats.matrix_transpose_ms = std::chrono::duration<double, std::milli>(transpose_end - transpose_start).count();
+    if (verbose) std::cout << "Transpose time: " << stats.matrix_transpose_ms << "ms\n";
+
+    // ========== 4. Extract sparse R1CS matrices ==========
+    if (verbose) std::cout << "\nExtracting sparse R1CS matrices...\n";
+    auto extract_start = std::chrono::high_resolution_clock::now();
+    SparseMatrix sparse_a, sparse_b, sparse_c;
+    circuit::PreprocessSparse(pb, sparse_a, sparse_b, sparse_c);
+    auto extract_end = std::chrono::high_resolution_clock::now();
+    if (verbose) std::cout << "Extract time: " << std::chrono::duration<double, std::milli>(extract_end - extract_start).count() << "ms\n";
+
+    // ========== 5. Build copy constraint ranges ==========
+    std::vector<argument::CopyRange> copy_ranges = {
+        argument::CopyRange(out_idx, in_idx, 1)  // State copy: out[i] -> in[i+1]
+    };
+
+    // ========== 6. A12 prove/verify ==========
+    if (verbose) std::cout << "\n=== Generating A12 Iterative Proof ===\n";
+    
+    h256_t proof_seed = misc::RandH256();
+    argument::A12::SparseProveInput prove_input(
+        sparse_a, sparse_b, sparse_c, flat_row_z, copy_ranges, pc::kGetRefG1);
+    
+    auto prove_total_start = std::chrono::high_resolution_clock::now();
+    
+    if (verbose) std::cout << "Computing commitments...\n";
+    auto com_start = std::chrono::high_resolution_clock::now();
+    argument::A12::CommitmentPub com_pub;
+    argument::A12::CommitmentSec com_sec;
+    argument::A12::ComputeCom(com_pub, com_sec, prove_input);
+    auto com_end = std::chrono::high_resolution_clock::now();
+    stats.compute_com_ms = std::chrono::duration<double, std::milli>(com_end - com_start).count();
+    if (verbose) std::cout << "Commitment time: " << stats.compute_com_ms << "ms\n";
+    
+    stats.com_g1_count = com_pub.com_z.size();
+    
+    if (verbose) std::cout << "Generating proof...\n";
+    auto prove_start = std::chrono::high_resolution_clock::now();
+    argument::A12::Proof proof;
+    argument::A12::ProveIf(proof, proof_seed, prove_input, com_pub, com_sec);
+    auto prove_end = std::chrono::high_resolution_clock::now();
+    stats.prove_ms = std::chrono::duration<double, std::milli>(prove_end - prove_start).count();
+    if (verbose) std::cout << "Prove time: " << stats.prove_ms << "ms\n";
+    
+    auto prove_total_end = std::chrono::high_resolution_clock::now();
+    stats.prove_total_ms = std::chrono::duration<double, std::milli>(prove_total_end - prove_total_start).count();
+    
+    stats.proof_fr_size = proof.FrSize();
+    stats.proof_g1_size = proof.G1Size();
+    
+    // Serialize commitment to get size
+    yas::mem_ostream com_os;
+    yas::binary_oarchive<yas::mem_ostream, YasBinF()> com_oa(com_os);
+    com_oa.serialize(com_pub);
+    stats.com_serialized_size = com_os.get_shared_buffer().size;
+    
+    // Serialize proof to get size
+    yas::mem_ostream proof_os;
+    yas::binary_oarchive<yas::mem_ostream, YasBinF()> proof_oa(proof_os);
+    proof_oa.serialize(proof);
+    stats.proof_serialized_size = proof_os.get_shared_buffer().size;
+    
+    stats.total_proof_size = stats.com_serialized_size + stats.proof_serialized_size;
+    
+    // A12 verify
+    if (verbose) std::cout << "\nVerifying proof...\n";
+    auto verify_total_start = std::chrono::high_resolution_clock::now();
+    auto verify_start = std::chrono::high_resolution_clock::now();
+    argument::A12::SparseVerifyInput verify_input(
+        sparse_a, sparse_b, sparse_c, com_pub, stats.num_instances, copy_ranges, pc::kGetRefG1);
+    stats.verify_success = argument::A12::VerifyIf(proof, proof_seed, verify_input);
+    auto verify_end = std::chrono::high_resolution_clock::now();
+    stats.verify_ms = std::chrono::duration<double, std::milli>(verify_end - verify_start).count();
+    auto verify_total_end = std::chrono::high_resolution_clock::now();
+    stats.verify_total_ms = std::chrono::duration<double, std::milli>(verify_total_end - verify_total_start).count();
+    
+    if (verbose) {
+        std::cout << "Verify time: " << stats.verify_ms << "ms\n";
+        std::cout << "Verify result: " << (stats.verify_success ? "SUCCESS" : "FAILED") << "\n";
     }
+    
+    auto total_end = std::chrono::high_resolution_clock::now();
+    stats.total_ms = std::chrono::duration<double, std::milli>(total_end - total_start).count();
+    
+    stats.max_steps = max_steps;
+    stats.peak_memory_mb = misc::GetPeakMemoryByPid(getpid()) / 1024.0;
 
-    {
-        yas::mem_ostream os;
-        yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-        oa.serialize(msg.env_proof);
-        std::cout << "env proof size: " << os.get_shared_buffer().size << "\n";
-    }
-
-    {
-        yas::mem_ostream os;
-        yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-        oa.serialize(msg.mimc_proof);
-        std::cout << "mimc proof size: " << os.get_shared_buffer().size << "\n";
-    }
-
-     {
-        yas::mem_ostream os;
-        yas::binary_oarchive<yas::mem_ostream, YasBinF()> oa(os);
-        oa.serialize(msg.key_proof);
-        std::cout << "key proof size: " << os.get_shared_buffer().size << "\n";
-    }
-#endif
-
-    bool success = true;
-    {
-        Tick tick("Client Time");
-        CHECK(msg.mimc_proof.com_w.back() + commited_data.com_d == pc::ComputeCom(msg.enc_action, msg.r_enc_action), "");
-
-        success &= ModelVerify(seed, msg.mdl_proof, output_state.com_data, *para_com_pub);
-
-        VerifyEnvInput verify_input(state.size(), output_state.com_data, output_action.com_data);
-        success &= EnvVerify(seed, msg.env_proof, verify_input);
-
-        success &= Pod::VerifyAndBuy(msg.mimc_proof, seed, state.size());
-
-        success &= Pod::KeyVerify(seed, state.size(), secret.com_key, msg.key_proof, block_len);
-    }
-
-    std::cout << "success:" << success << "\n";
-    return success;
+    return stats;
 }
 
-}
+}  // namespace clink::frozenlake

@@ -3,6 +3,7 @@
 #include "./details.h"
 #include "./a2.h"
 
+// R_{cp}
 // b: public vector<Fr>, size = n
 // a: secret vector<Fr>, size = n
 // c: secret Fr,c = <a,b>
@@ -178,16 +179,15 @@ struct A3 {
     UpdateSeed(seed, proof.com);
     Fr e = H256ToFr(seed);
 
-    bool ret = (com_t + com_c * e == pc::ComputeCom(input.gc, z, zeta));
+    bool ret_com = (com_t + com_c * e == pc::ComputeCom(input.gc, z, zeta));
 
     A2::CommitmentPub pub;
-    auto & com_a_hat = pub.com_a;
-    com_a_hat = com_d + com_a * e - pc::PcH() * gamma;
+    pub.com_a = com_d + com_a * e - pc::PcH() * gamma;
 
-    A2::VerifyInput in(b, z, com_a_hat, input.get_ga);
-    ret = ret && A2::Verify(proof.sub_proof, seed, in);
+    A2::VerifyInput in(b, z, pub, input.get_ga);
+    bool ret_a2 = A2::Verify(proof.sub_proof, seed, in);
 
-    return ret;
+    return ret_com && ret_a2;
   }
 
   static bool Test(int64_t n);

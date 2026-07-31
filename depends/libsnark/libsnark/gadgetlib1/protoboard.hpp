@@ -60,6 +60,7 @@ public:
     void set_input_sizes(const size_t primary_input_size);
 
     r1cs_variable_assignment<FieldT> full_variable_assignment() const;
+    r1cs_variable_assignment<FieldT> const& full_variable_assignment_ref() const;
     r1cs_primary_input<FieldT> primary_input() const;
     r1cs_auxiliary_input<FieldT> auxiliary_input() const;
     r1cs_constraint_system<FieldT> get_constraint_system() const;

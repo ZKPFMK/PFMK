@@ -3,6 +3,10 @@
 #include "./types.h"
 #include "public.h"
 
+#ifdef __APPLE__
+#include <sys/resource.h>
+#endif
+
 namespace misc {
 inline void BuildR(std::vector<Fr>& s, std::vector<Fr> const& r){
   // Tick tick(__FN__, std::to_string(r.size()) + " " + std::to_string(s.size()));
@@ -77,6 +81,23 @@ inline void BuildE(std::vector<Fr>& s, std::vector<Fr> const& e, bool reverse=fa
           s[l] = s[j] * e[i];
         }
       }
+    }
+  }
+}
+
+// Compute the "acute" tensor product: otimes_{i=0}^{k-1} (1, e[i])
+  // Result has size 2^k
+static void ComputeAcuteTensor(std::vector<Fr>& result,
+                              std::vector<Fr> const& challenges,
+                              int64_t start, int64_t count) {
+  int64_t size = 1LL << count;
+  result.resize(size);
+  result[0] = Fr(1);
+  for (int64_t i = 0; i < count; ++i) {
+    int64_t half = 1LL << i;
+    for (int64_t j = half - 1; j >= 0; --j) {
+      result[2 * j + 1] = result[j] * challenges[start + i];
+      result[2 * j] = result[j];
     }
   }
 }
@@ -275,6 +296,51 @@ void PrintArray(std::array<Fr, N> const& a) {
     std::cout << i << "\n";
   }
   std::cout << "\n";
+}
+
+/**
+ * Get peak memory usage of a process by PID
+ * @param pid Process ID
+ * @return Peak memory usage in kB, or 0 if failed
+ */
+inline int GetPeakMemoryByPid(pid_t pid) {
+#ifdef __linux__
+  char file_name[64];
+  sprintf(file_name, "/proc/%d/status", pid);
+
+  FILE* fd = fopen(file_name, "r");
+  if (!fd) return 0;
+
+  char line_buff[512];
+  int vmhwm = 0;
+  while (fgets(line_buff, sizeof(line_buff), fd)) {
+    if (strncmp(line_buff, "VmHWM:", 6) == 0) {
+      sscanf(line_buff, "%*s %d", &vmhwm);
+      break;
+    }
+  }
+  fclose(fd);
+  return vmhwm;  // kB
+#elif defined(__APPLE__)
+  (void)pid;
+  struct rusage usage;
+  if (getrusage(RUSAGE_SELF, &usage) == 0) {
+    // macOS returns ru_maxrss in bytes
+    return (int)(usage.ru_maxrss / 1024);  // convert to kB
+  }
+  return 0;
+#else
+  (void)pid;
+  return 0;
+#endif
+}
+
+/**
+ * Print current process memory usage
+ */
+inline void PrintMemoryUsage() {
+  double mb = GetPeakMemoryByPid(getpid()) / 1024.0;
+  std::cout << "Process peak memory: " << mb << " MB\n";
 }
 
 }  // namespace misc

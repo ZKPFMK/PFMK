@@ -15,12 +15,48 @@ class Relu2Gadget : public libsnark::gadget<Fr> {
   static_assert(D + N < 253, "invalid D,N");
   static_assert(N > M, "invalid N or M");
 
- public:
+  public:
+  // Constructor that allocates internal input variable a_ (standalone mode)
   Relu2Gadget(libsnark::protoboard<Fr>& pb,
               const std::string& annotation_prefix = "")
-      : libsnark::gadget<Fr>(pb, annotation_prefix) {
+      : libsnark::gadget<Fr>(pb, annotation_prefix), a_is_external_(false) {
     a_.allocate(this->pb, FMT(this->annotation_prefix, " a"));
     ret_.allocate(pb, FMT(this->annotation_prefix, " ret"));
+    precision_gadget_.reset(new PrecisionGadget<D, N, M>(
+        this->pb, a_, FMT(this->annotation_prefix, " precision_gadget")));
+    generate_r1cs_constraints();
+  }
+
+  // Constructor that accepts external input variable (chained mode)
+  // Use this when chaining with previous gadget to ensure variable identity
+  Relu2Gadget(libsnark::protoboard<Fr>& pb,
+              libsnark::pb_variable<Fr> const& a_external,
+              const std::string& annotation_prefix = "")
+      : libsnark::gadget<Fr>(pb, annotation_prefix),
+        a_(a_external),
+        a_is_external_(true) {
+    ret_.allocate(pb, FMT(this->annotation_prefix, " ret"));
+    precision_gadget_.reset(new PrecisionGadget<D, N, M>(
+        this->pb, a_, FMT(this->annotation_prefix, " precision_gadget")));
+    generate_r1cs_constraints();
+  }
+
+  // Constructor that accepts external input as linear_combination
+  // For compatibility with IpGadget::ret() which returns linear_combination
+  Relu2Gadget(libsnark::protoboard<Fr>& pb,
+              libsnark::linear_combination<Fr> const& a_external_lc,
+              const std::string& annotation_prefix = "")
+      : libsnark::gadget<Fr>(pb, annotation_prefix),
+        a_is_external_(true) {
+    // Allocate a_ and add constraint: a_ = a_external_lc
+    a_.allocate(this->pb, FMT(this->annotation_prefix, " a"));
+    ret_.allocate(pb, FMT(this->annotation_prefix, " ret"));
+    
+    // Add constraint to link external LC to internal a_
+    this->pb.add_r1cs_constraint(
+        libsnark::r1cs_constraint<Fr>(a_external_lc, 1, a_),
+        FMT(this->annotation_prefix, " a = external_lc"));
+    
     precision_gadget_.reset(new PrecisionGadget<D, N, M>(
         this->pb, a_, FMT(this->annotation_prefix, " precision_gadget")));
     generate_r1cs_constraints();
@@ -33,6 +69,15 @@ class Relu2Gadget : public libsnark::gadget<Fr> {
 
   libsnark::pb_variable<Fr> ret() const { return ret_; }
 
+  void generate_r1cs_witness() {
+    precision_gadget_->generate_r1cs_witness();
+
+    // auto a = a_.evaluate(this->pb.full_variable_assignment_ref());
+    auto b = precision_gadget_->ret().evaluate(this->pb.full_variable_assignment_ref());
+    auto sign = precision_gadget_->sign().evaluate(this->pb.full_variable_assignment_ref());
+    this->pb.val(ret_) = sign == Fr(0) ? Fr(0) : b;
+  }
+
  private:
   void generate_r1cs_constraints() {
     precision_gadget_->generate_r1cs_constraints();
@@ -42,15 +87,6 @@ class Relu2Gadget : public libsnark::gadget<Fr> {
         libsnark::r1cs_constraint<Fr>(precision_gadget_->ret(),
                                       precision_gadget_->sign(), ret_),
         FMT(this->annotation_prefix, " ret = sign? b:0"));
-  }
-
-  void generate_r1cs_witness() {
-    precision_gadget_->generate_r1cs_witness();
-
-    // auto a = this->pb.lc_val(a_);
-    auto b = this->pb.lc_val(precision_gadget_->ret());
-    auto sign = this->pb.lc_val(precision_gadget_->sign());
-    this->pb.val(ret_) = sign == Fr(0) ? Fr(0) : b;
   }
 
  public:
@@ -77,6 +113,7 @@ class Relu2Gadget : public libsnark::gadget<Fr> {
 
  private:
   libsnark::pb_variable<Fr> a_;
+  bool a_is_external_;
   std::unique_ptr<PrecisionGadget<D, N, M>> precision_gadget_;
   libsnark::pb_variable<Fr> ret_;
 };

@@ -430,12 +430,134 @@ using MatrixFr = Eigen::Matrix<FrW, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMa
 using ColVectorFr = Eigen::Matrix<FrW, Eigen::Dynamic, 1>;
 using RowVectorFr = Eigen::Matrix<FrW, 1, Eigen::Dynamic>;
 
-inline void ConvertVecToMat(std::vector<std::vector<Fr>> const& a, MatrixFr & ret){
+// ========================================================================
+// FlatMatrix: Row-major contiguous memory layout matrix
+// ========================================================================
+struct FlatMatrix {
+  int64_t rows_ = 0;
+  int64_t cols_ = 0;
+  std::vector<Fr> data_;
+
+  FlatMatrix() = default;
+  FlatMatrix(int64_t rows, int64_t cols)
+      : rows_(rows), cols_(cols), data_(rows * cols) {}
+  FlatMatrix(int64_t rows, int64_t cols, Fr const& fill_value)
+      : rows_(rows), cols_(cols), data_(rows * cols, fill_value) {}
+
+  int64_t rows() const { return rows_; }
+  int64_t cols() const { return cols_; }
+  bool empty() const { return rows_ == 0 || cols_ == 0; }
+
+  Fr& operator()(int64_t i, int64_t j) { return data_[i * cols_ + j]; }
+  Fr const& operator()(int64_t i, int64_t j) const { return data_[i * cols_ + j]; }
+
+  Fr* row_ptr(int64_t i) { return data_.data() + i * cols_; }
+  Fr const* row_ptr(int64_t i) const { return data_.data() + i * cols_; }
+
+  std::vector<Fr> col(int64_t j) const {
+    std::vector<Fr> result(rows_);
+    auto parallel_f = [this, &result, j](int64_t i) {
+      result[i] = data_[i * cols_ + j];
+    };
+    parallel::For(rows_, parallel_f);
+    return result;
+  }
+
+  std::vector<Fr> row(int64_t i) const {
+    std::vector<Fr> result(cols_);
+    Fr const* ptr = row_ptr(i);
+    std::copy(ptr, ptr + cols_, result.begin());
+    return result;
+  }
+
+  // Fill entire matrix with a value
+  void fill(Fr const& value) {
+    auto parallel_f = [this, &value](int64_t i) {
+      data_[i] = value;
+    };
+    parallel::For((int64_t)data_.size(), parallel_f);
+  }
+
+  // Resize and zero-fill
+  void resize(int64_t rows, int64_t cols) {
+    rows_ = rows;
+    cols_ = cols;
+    data_.assign(rows * cols, FrZero());
+  }
+
+  // Element-wise addition: this += other
+  FlatMatrix& operator+=(FlatMatrix const& other) {
+    assert(rows_ == other.rows_ && cols_ == other.cols_);
+    auto parallel_f = [this, &other](int64_t i) {
+      data_[i] += other.data_[i];
+    };
+    parallel::For((int64_t)data_.size(), parallel_f);
+    return *this;
+  }
+
+  // Row-vector addition: row(i) += vec
+  void addToRow(int64_t i, std::vector<Fr> const& vec) {
+    assert((int64_t)vec.size() == cols_);
+    Fr* ptr = row_ptr(i);
+    for (int64_t j = 0; j < cols_; ++j) {
+      ptr[j] += vec[j];
+    }
+  }
+
+  // Row-vector scaled addition: row(i) += vec * scalar
+  void addScaledToRow(int64_t i, std::vector<Fr> const& vec, Fr const& scalar) {
+    assert((int64_t)vec.size() == cols_);
+    Fr* ptr = row_ptr(i);
+    for (int64_t j = 0; j < cols_; ++j) {
+      ptr[j] += vec[j] * scalar;
+    }
+  }
+
+  // Scalar multiply entire row: row(i) *= scalar
+  void scaleRow(int64_t i, Fr const& scalar) {
+    Fr* ptr = row_ptr(i);
+    for (int64_t j = 0; j < cols_; ++j) {
+      ptr[j] *= scalar;
+    }
+  }
+
+  bool operator==(FlatMatrix const& other) const {
+    if (rows_ != other.rows_ || cols_ != other.cols_) return false;
+    for (size_t i = 0; i < data_.size(); ++i) {
+      if (data_[i] != other.data_[i]) return false;
+    }
+    return true;
+  }
+
+  bool operator!=(FlatMatrix const& other) const { return !(*this == other); }
+
+  static FlatMatrix FromVecVec(std::vector<std::vector<Fr>> const& vv) {
+    if (vv.empty()) return FlatMatrix();
+    int64_t rows = (int64_t)vv.size();
+    int64_t cols = (int64_t)vv[0].size();
+    FlatMatrix mat(rows, cols);
+    auto parallel_f = [&vv, &mat, cols](int64_t i) {
+      mat.data_[i] = vv[i / cols][i % cols];
+    };
+    parallel::For(rows * cols, parallel_f);
+    return mat;
+  }
+};
+
+inline void ConvertFlatToMat(FlatMatrix const& a, MatrixFr & ret){
   auto parallel_f = [&a, &ret](int64_t i) {
-    int64_t row = i / a[0].size(), col = i % a[0].size();
-    ret(row, col) = FrW(a[row][col]);
+    int64_t row = i / a.cols(), col = i % a.cols();
+    ret(row, col) = FrW(a(row, col));
   };
-  parallel::For(a.size() * a[0].size(), parallel_f);
+  parallel::For(a.rows() * a.cols(), parallel_f);
+}
+
+inline void ConvertVecToMat(FlatMatrix const& a, MatrixFr & ret){
+  auto parallel_f = [&a, &ret](int64_t i) {
+    int64_t row = i / a.cols(), col = i % a.cols();
+    ret(row, col) = FrW(a(row, col));
+  };
+  parallel::For(a.rows() * a.cols(), parallel_f);
 }
 
 inline void ConvertVecToMat(std::vector<Fr> const& a, RowVectorFr & ret){
@@ -452,11 +574,11 @@ inline void ConvertVecToMat(std::vector<Fr> const& a, ColVectorFr & ret){
   parallel::For(a.size(), parallel_f);
 }
 
-inline void ConvertMatToVec(std::vector<std::vector<Fr>> & ret, MatrixFr const& a){
-  ret.resize(a.rows(), std::vector<Fr>(a.cols()));
+inline void ConvertMatToVec(FlatMatrix & ret, MatrixFr const& a){
+  ret.resize(a.rows(), a.cols());
   auto parallel_f = [&a, &ret](int64_t i) {
-    int64_t row = i / ret[0].size(), col = i % ret[0].size();
-    ret[row][col] = a(row, col).v;
+    int64_t row = i / ret.cols(), col = i % ret.cols();
+    ret(row, col) = a(row, col).v;
   };
   parallel::For(a.rows() * a.cols(), parallel_f);
 }
@@ -478,10 +600,13 @@ inline void ConvertMatToVec(std::vector<Fr> & ret, ColVectorFr const& a){
 }
 
 inline Fr InnerProduct(Fr const* a, Fr const* b, size_t n) {
-  std::vector<Fr> c(n);
-  auto parallel_f = [&c, a, b](int64_t i) { c[i] = a[i] * b[i]; };
+  if (n == 0) return FrZero();
+  if (n == 1) return a[0] * b[0];
+
+  std::vector<Fr> rets(n);
+  auto parallel_f = [a, b, &rets](int64_t i) { rets[i] = a[i] * b[i]; };
   parallel::For(n, parallel_f);
-  return parallel::Accumulate(c.begin(), c.end(), FrZero());
+  return parallel::Accumulate(rets.begin(), rets.end(), FrZero());
 }
 
 inline Fr Sum(std::vector<Fr> const& a){
@@ -489,11 +614,11 @@ inline Fr Sum(std::vector<Fr> const& a){
   return parallel::Accumulate(a.begin(), a.end(), FrZero());
 }
 
-inline Fr InnerProduct(std::vector<Fr> const& a, std::vector<std::vector<Fr>> const& b, size_t j) {
-  assert(a.size() == b.size() && j < b[0].size());
+inline Fr InnerProduct(std::vector<Fr> const& a, FlatMatrix const& b, size_t j) {
+  assert((int64_t)a.size() == b.rows() && (int64_t)j < b.cols());
   std::vector<Fr> rets(a.size());
-  auto parallel_f = [&rets, a, b, &j](int64_t i) { rets[i] = a[i] * b[i][j]; };
-  parallel::For(a.size(), parallel_f);
+  auto parallel_f = [&rets, &a, &b, j](int64_t i) { rets[i] = a[i] * b(i, j); };
+  parallel::For((int64_t)a.size(), parallel_f);
   return parallel::Accumulate(rets.begin(), rets.end(), FrZero());
 }
 
@@ -504,14 +629,16 @@ inline Fr InnerProduct(std::vector<Fr> const& a, std::vector<Fr> const& b) {
   return InnerProduct(a.data(), b.data(), n);
 }
 
-inline Fr InnerProduct(std::vector<std::vector<Fr>> const& a, std::vector<std::vector<Fr>> const& b) {
-  assert(a.size() == b.size() && a[0].size() == b[0].size());
-  std::vector<Fr> c(a.size());
+inline Fr InnerProduct(FlatMatrix const& a, FlatMatrix const& b) {
+  assert(a.rows() == b.rows() && a.cols() == b.cols());
+  std::vector<Fr> c(a.rows());
   auto parallel_f = [&a, &b, &c](size_t i) {
-    c[i] = InnerProduct(a[i], b[i]);
+    Fr const* row_a = a.row_ptr(i);
+    Fr const* row_b = b.row_ptr(i);
+    c[i] = InnerProduct(row_a, row_b, a.cols());
   };
-  parallel::For(c.size(), parallel_f);
-  return parallel::Accumulate(c.begin(), c.end(), FrZero());;
+  parallel::For((int64_t)c.size(), parallel_f);
+  return parallel::Accumulate(c.begin(), c.end(), FrZero());
 }
 
 inline Fr InnerProduct(std::function<Fr(size_t)> const& get_a,
@@ -534,110 +661,66 @@ inline Fr InnerProduct(std::function<Fr(size_t)> const& get_a,
   return parallel::Accumulate(rets.begin(), rets.end(), FrZero());
 }
 
-template <typename T>
-inline void CopyLineToRow(std::vector<std::vector<T>> const& a, std::vector<T> & b, int64_t j){
-  b.resize(a.size());
-  auto parallel_f = [&a, &b, &j](size_t i) {
-    b[i] = a[i][j];
+// MatrixVectorMul for FlatMatrix: result[i] = sum_j mat(i,j) * vec[j]
+// This computes mat * vec (standard matrix-vector multiply).
+inline void MatrixVectorMul(FlatMatrix const& mat,
+                            std::vector<Fr> const& vec,
+                            std::vector<Fr>& result) {
+  int64_t rows = mat.rows();
+  int64_t cols = mat.cols();
+  result.resize(rows);
+  
+  auto parallel_f = [&](int64_t i) {
+    result[i] = InnerProduct(mat.row_ptr(i), vec.data(), cols);
   };
-  parallel::For(b.size(), parallel_f);
+  parallel::For(rows, parallel_f);
 }
 
-template <typename T>
-inline void CopyRowToLine(std::vector<std::vector<T>> & a, std::vector<T> const& b, int64_t j, bool one=false){
-  if(one){
-    CHECK(a.size() == b.size() + 1 && a[0].size() > j, std::to_string(a.size()) + " " + std::to_string(b.size()));
-     auto parallel_f = [&a, &b, &j](size_t i) {
-      a[i+1][j] = b[i];
-    };
-    parallel::For(b.size(), parallel_f);
-    a[0][j] = FrOne();
-  }else{
-    CHECK(a.size() == b.size() && a[0].size() > j, std::to_string(a.size()) + " " + std::to_string(b.size()));
-    auto parallel_f = [&a, &b, &j](size_t i) {
-      a[i][j] = b[i];
-    };
-    parallel::For(b.size(), parallel_f);
-  }
+// MatrixVectorMul for FlatMatrix with vec first: result[j] = sum_i mat(i,j) * vec[i]
+// This computes mat^T * vec (left-multiply by row vector / transpose multiply).
+inline void MatrixVectorMul(std::vector<Fr> const& vec,
+                            FlatMatrix const& mat,
+                            std::vector<Fr>& result) {
+  int64_t cols = mat.cols();
+  result.resize(cols);
+  
+  auto parallel_f = [&](int64_t j) {
+    result[j] = InnerProduct(vec, mat, j);
+  };
+  parallel::For(cols, parallel_f);
 }
 
-//矩阵 * 列 = 列
-inline void MatrixVectorMul(std::vector<std::vector<Fr>> const& a, std::vector<Fr> const& b, std::vector<Fr> & c){
-  assert(a[0].size() == b.size());
-  c.resize(a.size());
-  {
-    // Tick tick("tbb matrix vector mul");
-    auto parallel_f = [&c, &a, &b](int64_t i) {
-      c[i] = InnerProduct(a[i], b);
-    };
-    parallel::For(a.size(), parallel_f);
-  }
-  // MatrixFr ma(a.size(), a[0].size());
-  // ColVectorFr mb(b.size());
-  // ConvertVecToMat(a, ma);
-  // ConvertVecToMat(b, mb);
-  // ColVectorFr mc(a.size());
-  // {
-  //   Tick tick("eigen matrix vector mul");
-  //   mc = ma * mb;
-  // }
-  // ConvertMatToVec(c, mc);
-}
 
-inline void MatrixVectorMul(std::function<Fr(size_t)> const& get_a, std::vector<std::vector<Fr>> const& b, std::vector<Fr> & c){
-  c.resize(b[0].size());
+inline void MatrixVectorMul(std::function<Fr(size_t)> const& get_a, FlatMatrix const& b, std::vector<Fr> & c){
+  c.resize(b.cols());
   auto parallel_f = [&c, &get_a, &b](int64_t j) {
-    auto get_b = [&b, &j](size_t i) -> Fr const& { return b[i][j]; };
-    c[j] = InnerProduct(get_b, get_a, b.size());
+    auto get_b = [&b, j](size_t i) -> Fr { return b(i, j); };
+    c[j] = InnerProduct(get_b, get_a, b.rows());
   };
-  parallel::For(b[0].size(), parallel_f);
+  parallel::For(b.cols(), parallel_f);
 }
 
-inline std::vector<Fr> MatrixVectorMul(std::vector<std::vector<Fr>> const& a, std::vector<Fr> const& b){
-  assert(b.size() == a[0].size());
-  std::vector<Fr> c(a.size());
+inline std::vector<Fr> MatrixVectorMul(FlatMatrix const& a, std::vector<Fr> const& b){
+  assert((int64_t)b.size() == a.cols());
+  std::vector<Fr> c(a.rows());
   MatrixVectorMul(a, b, c);
   return c;
 }
 
-inline void MatrixVectorMul(std::vector<Fr> const& a, std::vector<std::vector<Fr>> const& b, std::vector<Fr> & c){
-  assert(a.size() == b.size());
-  c.resize(b[0].size());
-  {
-    // Tick tick("tbb matrix vector mul");
-    auto parallel_f = [&c, &a, &b](int64_t j) {
-    auto get_b = [&b, &j](size_t i) -> Fr const& { return b[i][j]; };
-      c[j] = InnerProduct(get_b, a);
-    };
-    parallel::For(b[0].size(), parallel_f);
-  }
-
-  // RowVectorFr ma(a.size());
-  // MatrixFr mb(b.size(), b[0].size());
-  // ConvertVecToMat(a, ma);
-  // ConvertVecToMat(b, mb);
-  // RowVectorFr mc(b[0].size());
-  // {
-  //   Tick tick("eigen matrix vector mul");
-  //   mc = ma * mb;
-  // }
-  // ConvertMatToVec(c, mc);
-}
-
-inline std::vector<Fr> MatrixVectorMul(std::vector<Fr> const& a, std::vector<std::vector<Fr>> const& b){
-  assert(a.size() == b.size());
-  std::vector<Fr> c(b[0].size());
+inline std::vector<Fr> MatrixVectorMul(std::vector<Fr> const& a, FlatMatrix const& b){
+  assert((int64_t)a.size() == b.rows());
+  std::vector<Fr> c(b.cols());
   MatrixVectorMul(a, b, c);
   return c;
 }
 
-inline void OuterProduct(std::vector<Fr> const& a, std::vector<Fr> const& b, std::vector<std::vector<Fr>> & c){
-  c.resize(a.size(), std::vector<Fr>(b.size()));
+inline void OuterProduct(std::vector<Fr> const& a, std::vector<Fr> const& b, FlatMatrix & c){
+  c.resize(a.size(), b.size());
   auto parallel_f = [&a, &b, &c](size_t i){
     size_t row = i / b.size(), col = i % b.size();
-    c[row][col] = a[row] * b[col];
+    c(row, col) = a[row] * b[col];
   };
-  parallel::For(c.size() * c[0].size(), parallel_f);
+  parallel::For(a.size() * b.size(), parallel_f);
 }
 
 inline void OuterProduct(std::vector<Fr> const& a, std::vector<Fr> const& b, std::vector<Fr> & c){
@@ -649,71 +732,51 @@ inline void OuterProduct(std::vector<Fr> const& a, std::vector<Fr> const& b, std
   parallel::For(c.size(), parallel_f);
 }
 
-inline void MatrixSum(std::vector<std::vector<Fr>> & a, std::vector<std::vector<Fr>> const& b){
-  assert(a.size() == b.size() && a[0].size() == b[0].size());
+inline void MatrixSum(FlatMatrix & a, FlatMatrix const& b){
+  assert(a.rows() == b.rows() && a.cols() == b.cols());
   auto parallel_f = [&a, &b](int64_t i) {
-    size_t row = i / a[0].size(), col = i % a[0].size();
-    a[row][col] = a[row][col] + b[row][col];
+    a.data_[i] += b.data_[i];
   };
-  parallel::For(a.size() * a[0].size(), parallel_f);
+  parallel::For((int64_t)a.data_.size(), parallel_f);
 }
 
-inline std::vector<std::vector<Fr>> MatrixMul(std::vector<std::vector<Fr>> const& a, Fr const& b){
-  std::vector<std::vector<Fr>> c(a.size(), std::vector<Fr>(a[0].size()));
-  auto parallel_f = [&c, &a, &b](int64_t i) {
-    c[i] = a[i] * b;
+inline FlatMatrix MatrixMul(FlatMatrix const& a, Fr const& b){
+  FlatMatrix c(a.rows(), a.cols());
+  auto parallel_f = [&c, &a, &b](int64_t idx) {
+    c.data_[idx] = a.data_[idx] * b;
   };
-  parallel::For(a.size(), parallel_f);
+  parallel::For(a.rows() * a.cols(), parallel_f);
   return c;
 }
 
-inline void MatrixMul(std::vector<std::vector<Fr>> & c, std::vector<std::vector<Fr>> const& a, Fr const& b){
-  c.resize(a.size(), std::vector<Fr>(a[0].size()));
-  // {
-  //   Tick tick("tbb matrix scalar 1!");
-  //   auto parallel_f = [&c, &a, &b](int64_t i) {
-  //     c[i] = a[i] * b;
-  //   };
-  //   parallel::For(a.size(), parallel_f);
-  // }
-
-  {
-    // Tick tick("tbb matrix scalar 2!");
-    auto parallel_f = [&c, &a, &b](int64_t idx) {
-      size_t row = idx / a.size(), col = idx % a.size();
-      c[row][col] = a[row][col] * b;
-    };
-    parallel::For(a.size() * a[0].size(), parallel_f);
-  }
+inline void MatrixMul(FlatMatrix & c, FlatMatrix const& a, Fr const& b){
+  c.resize(a.rows(), a.cols());
+  auto parallel_f = [&c, &a, &b](int64_t idx) {
+    c.data_[idx] = a.data_[idx] * b;
+  };
+  parallel::For(a.rows() * a.cols(), parallel_f);
 }
 
-inline void MatrixMul(std::vector<std::vector<Fr>> const& a, std::vector<std::vector<Fr>> const& b, std::vector<std::vector<Fr>> & c){
-  assert(a[0].size() == b.size());
-  c.resize(a.size(), std::vector<Fr>(b[0].size()));
-  // {
-  //   Tick tick("eigen matrix mul!");
-  //   auto parallel_f = [&c, &a, &b](int64_t i) {
-  //     int64_t row = i / c[0].size(), col = i % c[0].size();
-  //     auto get_a = [&a, &row](size_t k) -> Fr const& { return a[row][k]; };
-  //     auto get_b = [&b, &col](size_t k) -> Fr const& { return b[k][col]; };
-  //     c[row][col] = InnerProduct(get_a, get_b, a[0].size());
-  //   };
-  //   parallel::For(a.size() * b[0].size(), parallel_f);
-  // }
+inline void MatrixMul(FlatMatrix const& a, FlatMatrix const& b, FlatMatrix & c){
+  assert(a.cols() == b.rows());
+  int64_t m = a.rows();
+  int64_t n = a.cols();
+  int64_t p = b.cols();
+  c.resize(m, p);
 
-  {
-    // Tick tick("tbb matrix mul!");
-    MatrixFr ma(a.size(), a[0].size());
-    MatrixFr mb(b.size(), b[0].size());
-    ConvertVecToMat(a, ma);
-    ConvertVecToMat(b, mb);
-    MatrixFr mc = ma * mb;
-    ConvertMatToVec(c, mc);
-  }
+  using EigenMatFr = Eigen::Matrix<Fr, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+  using ConstMapFr = Eigen::Map<const EigenMatFr>;
+  using MapFr      = Eigen::Map<EigenMatFr>;
+
+  ConstMapFr ea(a.data_.data(), m, n);
+  ConstMapFr eb(b.data_.data(), n, p);
+  MapFr      ec(c.data_.data(), m, p);
+
+  ec.noalias() = ea * eb;
 }
 
-inline std::vector<std::vector<Fr>> MatrixMul(std::vector<std::vector<Fr>> const& a, std::vector<std::vector<Fr>> const& b){
-  std::vector<std::vector<Fr>> c(a.size(), std::vector<Fr>(b[0].size()));
+inline FlatMatrix MatrixMul(FlatMatrix const& a, FlatMatrix const& b){
+  FlatMatrix c;
   MatrixMul(a, b, c);
   return c;
 }
@@ -734,22 +797,20 @@ inline std::vector<Fr> HadamardProduct(Fr const* a, Fr const* b, size_t n) {
   return c;
 }
 
-inline void HadamardProduct(std::vector<std::vector<Fr>> const& a,
-                            std::vector<std::vector<Fr>> const& b,
-                            std::vector<std::vector<Fr>> & c) {
-  assert(a.size() == b.size() && a[0].size() == b[0].size());
-  c.resize(a.size(), std::vector<Fr>(a[0].size()));
-
-  auto parallel_f = [&c, a, b](int64_t i) {
-    int64_t row = i / a[0].size(), col = i % a[0].size();
-    c[row][col] = a[row][col] * b[row][col]; 
+inline void HadamardProduct(FlatMatrix const& a,
+                            FlatMatrix const& b,
+                            FlatMatrix & c) {
+  assert(a.rows() == b.rows() && a.cols() == b.cols());
+  c.resize(a.rows(), a.cols());
+  auto parallel_f = [&c, &a, &b](int64_t i) {
+    c.data_[i] = a.data_[i] * b.data_[i];
   };
-  parallel::For(a.size() * a[0].size(), parallel_f);
+  parallel::For(a.rows() * a.cols(), parallel_f);
 }
 
-inline std::vector<std::vector<Fr>> HadamardProduct(std::vector<std::vector<Fr>> const& a,
-                            std::vector<std::vector<Fr>> const& b) {
-  std::vector<std::vector<Fr>> c(a.size(), std::vector<Fr>(a[0].size()));
+inline FlatMatrix HadamardProduct(FlatMatrix const& a,
+                                  FlatMatrix const& b) {
+  FlatMatrix c;
   HadamardProduct(a, b, c);
   return c;
 }
@@ -762,128 +823,158 @@ inline std::vector<Fr> HadamardProduct(std::vector<Fr> const& a,
   return c;
 }
 
-void ComputeWitness(std::vector<std::vector<Fr>> const& w,
-                    std::vector<std::vector<Fr>> const& a,
-                    std::vector<std::vector<Fr>> const& b,
-                    std::vector<std::vector<Fr>> const& c,
-                    std::vector<std::vector<Fr>> & wa,
-                    std::vector<std::vector<Fr>> & wb,
-                    std::vector<std::vector<Fr>> & wc,
+void ComputeWitness(FlatMatrix const& w,
+                    FlatMatrix const& a,
+                    FlatMatrix const& b,
+                    FlatMatrix const& c,
+                    FlatMatrix & wa,
+                    FlatMatrix & wb,
+                    FlatMatrix & wc,
                     std::vector<Fr> const& r_com_w,
                     std::vector<Fr> & r_com_wa,
                     std::vector<Fr> & r_com_wb,
                     std::vector<Fr> & r_com_wc){
   Tick tick(__FN__);
 
-  assert(a[0].size() == w.size());
+  assert(a.cols() == w.rows());
 
-  wa.resize(a.size(), std::vector<Fr>(w[0].size(), FrZero()));
-  wb.resize(a.size(), std::vector<Fr>(w[0].size(), FrZero()));
-  wc.resize(a.size(), std::vector<Fr>(w[0].size(), FrZero()));
-  r_com_wa.resize(a.size(), FrZero());
-  r_com_wb.resize(a.size(), FrZero());
-  r_com_wc.resize(a.size(), FrZero());
+  wa.resize(a.rows(), w.cols());
+  wb.resize(a.rows(), w.cols());
+  wc.resize(a.rows(), w.cols());
+  wa.fill(FrZero());
+  wb.fill(FrZero());
+  wc.fill(FrZero());
+  r_com_wa.resize(a.rows(), FrZero());
+  r_com_wb.resize(a.rows(), FrZero());
+  r_com_wc.resize(a.rows(), FrZero());
 
   //这里不要用MatrixMul, 很慢
   std::array<parallel::VoidTask, 3> tasks;
   tasks[0] = [&w, &a, &wa, &r_com_w, &r_com_wa]() {
     auto parallel_f = [&w, &a, &wa, &r_com_w, &r_com_wa](size_t i){
-        for(size_t j=0; j<a[i].size(); j++){
-            if(a[i][j] == FrZero()) continue;
-            else if(a[i][j] == FrOne()){
-              wa[i] += w[j];
+        for(int64_t j=0; j<a.cols(); j++){
+            Fr const& aij = a(i, j);
+            if(aij == FrZero()) continue;
+            Fr* wa_row = wa.row_ptr(i);
+            Fr const* w_row = w.row_ptr(j);
+            if(aij == FrOne()){
+              for(int64_t k=0; k<w.cols(); k++) wa_row[k] += w_row[k];
               r_com_wa[i] += r_com_w[j];
             }else{
-              wa[i] += w[j] * a[i][j];
-              r_com_wa[i] += r_com_w[j] * a[i][j];
+              for(int64_t k=0; k<w.cols(); k++) wa_row[k] += w_row[k] * aij;
+              r_com_wa[i] += r_com_w[j] * aij;
             }
         }
     };
-    parallel::For(a.size(), parallel_f);
+    parallel::For(a.rows(), parallel_f);
   };
   tasks[1] = [&w, &b, &wb, &r_com_w, &r_com_wb]() {
     auto parallel_f = [&w, &b, &wb, &r_com_w, &r_com_wb](size_t i){
-        for(size_t j=0; j<b[i].size(); j++){
-            if(b[i][j] == FrZero()) continue;
-            else if(b[i][j] == FrOne()){
-              wb[i] += w[j];
+        for(int64_t j=0; j<b.cols(); j++){
+            Fr const& bij = b(i, j);
+            if(bij == FrZero()) continue;
+            Fr* wb_row = wb.row_ptr(i);
+            Fr const* w_row = w.row_ptr(j);
+            if(bij == FrOne()){
+              for(int64_t k=0; k<w.cols(); k++) wb_row[k] += w_row[k];
               r_com_wb[i] += r_com_w[j];
-            }else {
-              wb[i] += w[j] * b[i][j];
-              r_com_wb[i] += r_com_w[j] * b[i][j];
+            }else{
+              for(int64_t k=0; k<w.cols(); k++) wb_row[k] += w_row[k] * bij;
+              r_com_wb[i] += r_com_w[j] * bij;
             }
         }
     };
-    parallel::For(b.size(), parallel_f);
+    parallel::For(b.rows(), parallel_f);
   };
   tasks[2] = [&w, &c, &wc, &r_com_w, &r_com_wc]() {
       auto parallel_f = [&w, &c, &wc, &r_com_w, &r_com_wc](size_t i){
-          for(size_t j=0; j<c[i].size(); j++){
-              if(c[i][j] == FrZero()) continue;
-              else if(c[i][j] == FrOne()){
-                wc[i] += w[j];
+          for(int64_t j=0; j<c.cols(); j++){
+              Fr const& cij = c(i, j);
+              if(cij == FrZero()) continue;
+              Fr* wc_row = wc.row_ptr(i);
+              Fr const* w_row = w.row_ptr(j);
+              if(cij == FrOne()){
+                for(int64_t k=0; k<w.cols(); k++) wc_row[k] += w_row[k];
                 r_com_wc[i] += r_com_w[j];
               }else{
-                wc[i] += w[j] * c[i][j];
-                r_com_wc[i] += r_com_w[j] * c[i][j];
+                for(int64_t k=0; k<w.cols(); k++) wc_row[k] += w_row[k] * cij;
+                r_com_wc[i] += r_com_w[j] * cij;
               }
           }
       };
-      parallel::For(c.size(), parallel_f);
+      parallel::For(c.rows(), parallel_f);
   };
   parallel::Invoke(tasks);
 
   assert(HadamardProduct(wa, wb) == wc);
 }
 
-void ComputeWitness(std::vector<std::vector<Fr>> const& w,
-                           std::vector<std::vector<Fr>> const& a,
-                           std::vector<std::vector<Fr>> const& b,
-                           std::vector<std::vector<Fr>> const& c,
-                           std::vector<std::vector<Fr>> & wa,
-                           std::vector<std::vector<Fr>> & wb,
-                           std::vector<std::vector<Fr>> & wc){
+void ComputeWitness(FlatMatrix const& w,
+                    FlatMatrix const& a,
+                    FlatMatrix const& b,
+                    FlatMatrix const& c,
+                    FlatMatrix & wa,
+                    FlatMatrix & wb,
+                    FlatMatrix & wc){
   Tick tick(__FN__);
-  assert(a[0].size() == w.size());
+  assert(a.cols() == w.rows());
 
-  wa.resize(a.size(), std::vector<Fr>(w[0].size(), FrZero()));
-  wb.resize(a.size(), std::vector<Fr>(w[0].size(), FrZero()));
-  wc.resize(a.size(), std::vector<Fr>(w[0].size(), FrZero()));
+  wa.resize(a.rows(), w.cols());
+  wb.resize(a.rows(), w.cols());
+  wc.resize(a.rows(), w.cols());
+  wa.fill(FrZero());
+  wb.fill(FrZero());
+  wc.fill(FrZero());
 
   //这里不要用MatrixMul, 很慢
   std::array<parallel::VoidTask, 3> tasks;
   tasks[0] = [&a, &wa, &w]() {
       auto parallel_f = [&w, &a, &wa](size_t i){
-          for(size_t j=0; j<a[i].size(); j++){
-              if(a[i][j] == FrZero()) continue;
-              else if(a[i][j] == FrOne()){
-                wa[i] += w[j];
-              }else wa[i] += w[j] * a[i][j];
+          for(int64_t j=0; j<a.cols(); j++){
+              Fr const& aij = a(i, j);
+              if(aij == FrZero()) continue;
+              Fr* wa_row = wa.row_ptr(i);
+              Fr const* w_row = w.row_ptr(j);
+              if(aij == FrOne()){
+                for(int64_t k=0; k<w.cols(); k++) wa_row[k] += w_row[k];
+              }else{
+                for(int64_t k=0; k<w.cols(); k++) wa_row[k] += w_row[k] * aij;
+              }
           }
       };
-      parallel::For(a.size(), parallel_f);
+      parallel::For(a.rows(), parallel_f);
   };
   tasks[1] = [&w, &b, &wb]() {
       auto parallel_f = [&w, &b, &wb](size_t i){
-          for(size_t j=0; j<b[i].size(); j++){
-              if(b[i][j] == FrZero()) continue;
-              else if(b[i][j] == FrOne()){
-                wb[i] += w[j];
-              }else wb[i] += w[j] * b[i][j];
+          for(int64_t j=0; j<b.cols(); j++){
+              Fr const& bij = b(i, j);
+              if(bij == FrZero()) continue;
+              Fr* wb_row = wb.row_ptr(i);
+              Fr const* w_row = w.row_ptr(j);
+              if(bij == FrOne()){
+                for(int64_t k=0; k<w.cols(); k++) wb_row[k] += w_row[k];
+              }else{
+                for(int64_t k=0; k<w.cols(); k++) wb_row[k] += w_row[k] * bij;
+              }
           }
       };
-      parallel::For(b.size(), parallel_f);
+      parallel::For(b.rows(), parallel_f);
   };
   tasks[2] = [&w, &c, &wc]() {
       auto parallel_f = [&w, &c, &wc](size_t i){
-          for(size_t j=0; j<c[i].size(); j++){
-              if(c[i][j] == FrZero()) continue;
-              else if(c[i][j] == FrOne()){
-                wc[i] += w[j];
-              }else wc[i] += w[j] * c[i][j];
+          for(int64_t j=0; j<c.cols(); j++){
+              Fr const& cij = c(i, j);
+              if(cij == FrZero()) continue;
+              Fr* wc_row = wc.row_ptr(i);
+              Fr const* w_row = w.row_ptr(j);
+              if(cij == FrOne()){
+                for(int64_t k=0; k<w.cols(); k++) wc_row[k] += w_row[k];
+              }else{
+                for(int64_t k=0; k<w.cols(); k++) wc_row[k] += w_row[k] * cij;
+              }
           }
       };
-      parallel::For(c.size(), parallel_f);
+      parallel::For(c.rows(), parallel_f);
   };
   parallel::Invoke(tasks);
 
@@ -1667,3 +1758,373 @@ inline bool TestMcl(int64_t n) {
   }
   return true;
 }
+
+// ========================================================================
+// SparseMatrix: CSR (Compressed Sparse Row) format
+// ========================================================================
+struct SparseMatrix {
+  int64_t rows_ = 0;
+  int64_t cols_ = 0;
+  std::vector<int64_t> row_ptr_;
+  std::vector<int64_t> col_idx_;
+  std::vector<Fr> values_;
+
+  SparseMatrix() = default;
+
+  int64_t rows() const { return rows_; }
+  int64_t cols() const { return cols_; }
+  int64_t nnz() const { return (int64_t)values_.size(); }
+  bool empty() const { return rows_ == 0 || cols_ == 0; }
+};
+
+// MatrixVectorMul for SparseMatrix: result[j] = sum_i vec[i] * mat(i,j)
+// (left-multiply by row vector, i.e. vec^T * mat)
+inline void MatrixVectorMul(std::vector<Fr> const& vec,
+                            SparseMatrix const& mat,
+                            std::vector<Fr>& result) {
+  int64_t rows = mat.rows();
+  int64_t cols = mat.cols();
+  result.assign(cols, FrZero());
+
+  // Compute per-row contributions in parallel
+  std::vector<std::vector<std::pair<int64_t, Fr>>> row_contribs(rows);
+  auto compute_row = [&](int64_t i) {
+    std::vector<std::pair<int64_t, Fr>> contrib;
+    Fr vi = vec[i];
+    for (int64_t k = mat.row_ptr_[i]; k < mat.row_ptr_[i + 1]; ++k) {
+      contrib.emplace_back(mat.col_idx_[k], vi * mat.values_[k]);
+    }
+    row_contribs[i] = std::move(contrib);
+  };
+  parallel::For(rows, compute_row);
+
+  // Reduce into result
+  for (int64_t i = 0; i < rows; ++i) {
+    for (auto const& p : row_contribs[i]) {
+      result[p.first] += p.second;
+    }
+  }
+}
+
+// SparseMatrix * FlatMatrix multiplication (parallel)
+// sparse_a is m x n_vars (CSR), dense_b is n_vars x n (FlatMatrix)
+// result is m x n: result(i,j) = sum_k sparse_a(i,k) * dense_b(k,j)
+inline void SparseMatrixMulDense(
+    SparseMatrix const& sparse_a,
+    FlatMatrix const& dense_b,
+    FlatMatrix& result) {
+  int64_t m = sparse_a.rows();
+  int64_t n = dense_b.cols();
+  result.resize(m, n);
+
+  auto compute_row = [&](int64_t i) {
+    Fr* result_row = result.row_ptr(i);
+    std::fill(result_row, result_row + n, FrZero());
+    for (int64_t k = sparse_a.row_ptr_[i]; k < sparse_a.row_ptr_[i + 1]; ++k) {
+      int64_t col = sparse_a.col_idx_[k];
+      Fr const& val = sparse_a.values_[k];
+      Fr const* b_row = dense_b.row_ptr(col);
+      for (int64_t j = 0; j < n; ++j) {
+        result_row[j] += val * b_row[j];
+      }
+    }
+  };
+  parallel::For(m, compute_row);
+}
+
+// Alias for backward compatibility
+inline void SparseMatrixMulFlat(
+    SparseMatrix const& sparse_a,
+    FlatMatrix const& flat_b,
+    FlatMatrix& result) {
+  SparseMatrixMulDense(sparse_a, flat_b, result);
+}
+
+// Build a scaled sparse matrix: result(i,j) = scale[i] * mat(i,j)
+// Returns a new SparseMatrix with the same sparsity pattern
+inline SparseMatrix ScaleSparseRows(
+    SparseMatrix const& mat,
+    std::vector<Fr> const& scale) {
+  SparseMatrix result;
+  result.rows_ = mat.rows_;
+  result.cols_ = mat.cols_;
+  result.row_ptr_ = mat.row_ptr_;
+  result.col_idx_ = mat.col_idx_;
+  result.values_.resize(mat.values_.size());
+
+  auto scale_row = [&](int64_t i) {
+    for (int64_t k = mat.row_ptr_[i]; k < mat.row_ptr_[i + 1]; ++k) {
+      result.values_[k] = scale[i] * mat.values_[k];
+    }
+  };
+  parallel::For(mat.rows_, scale_row);
+  return result;
+}
+
+// ========================================================================
+// SparseZMatrix: CSR format for sparse witness matrix Z
+// Used to optimize A12 protocol when Z has many zero elements
+// ========================================================================
+struct SparseZMatrix {
+  int64_t rows_ = 0;  // n_vars (number of variables)
+  int64_t cols_ = 0;  // n (number of instances)
+  std::vector<int64_t> row_ptr_;   // row pointers (size: rows_ + 1)
+  std::vector<int64_t> col_idx_;   // column indices of non-zero elements
+  std::vector<Fr> values_;         // non-zero values
+
+  SparseZMatrix() = default;
+
+  int64_t rows() const { return rows_; }
+  int64_t cols() const { return cols_; }
+  int64_t nnz() const { return (int64_t)values_.size(); }
+  bool empty() const { return rows_ == 0 || cols_ == 0; }
+  
+  double sparsity() const {
+    if (rows_ * cols_ == 0) return 0.0;
+    return 1.0 - static_cast<double>(nnz()) / (rows_ * cols_);
+  }
+  
+  // Get the i-th row's non-zero count
+  int64_t row_nnz(int64_t i) const {
+    return row_ptr_[i + 1] - row_ptr_[i];
+  }
+};
+
+// ========================================================================
+// SparseZMatrixCSC: CSC (Compressed Sparse Column) format for sparse Z
+// Enables O(nnz_col) column extraction instead of O(rows * avg_nnz_per_row)
+// ========================================================================
+struct SparseZMatrixCSC {
+  int64_t rows_ = 0;  // n_vars
+  int64_t cols_ = 0;  // n (instances)
+  std::vector<int64_t> col_ptr_;   // column pointers (size: cols_ + 1)
+  std::vector<int64_t> row_idx_;   // row indices of non-zero elements
+  std::vector<Fr> values_;         // non-zero values
+
+  SparseZMatrixCSC() = default;
+
+  int64_t rows() const { return rows_; }
+  int64_t cols() const { return cols_; }
+  int64_t nnz() const { return (int64_t)values_.size(); }
+
+  // Get non-zero count for column j
+  int64_t col_nnz(int64_t j) const {
+    return col_ptr_[j + 1] - col_ptr_[j];
+  }
+};
+
+// Convert CSR SparseZMatrix to CSC SparseZMatrixCSC in O(nnz) time.
+// This is a one-time cost that amortizes over all subsequent column accesses.
+inline SparseZMatrixCSC SparseZToCSC(SparseZMatrix const& csr) {
+  SparseZMatrixCSC csc;
+  csc.rows_ = csr.rows();
+  csc.cols_ = csr.cols();
+  int64_t total_nnz = csr.nnz();
+
+  csc.col_ptr_.assign(csc.cols_ + 1, 0);
+
+  // Pass 1: count non-zeros per column
+  for (int64_t k = 0; k < total_nnz; ++k) {
+    csc.col_ptr_[csr.col_idx_[k] + 1]++;
+  }
+
+  // Cumulative sum to get column pointers
+  for (int64_t j = 0; j < csc.cols_; ++j) {
+    csc.col_ptr_[j + 1] += csc.col_ptr_[j];
+  }
+
+  // Pass 2: fill row indices and values
+  csc.row_idx_.resize(total_nnz);
+  csc.values_.resize(total_nnz);
+  std::vector<int64_t> current_pos(csc.col_ptr_.begin(), csc.col_ptr_.end() - 1);
+
+  for (int64_t i = 0; i < csr.rows(); ++i) {
+    for (int64_t k = csr.row_ptr_[i]; k < csr.row_ptr_[i + 1]; ++k) {
+      int64_t j = csr.col_idx_[k];
+      int64_t pos = current_pos[j]++;
+      csc.row_idx_[pos] = i;
+      csc.values_[pos] = csr.values_[k];
+    }
+  }
+
+  return csc;
+}
+
+// Convert FlatMatrix to SparseZMatrix (CSR format)
+// Z is stored as rows = n_vars, cols = n_instances
+inline SparseZMatrix FlatMatrixToSparseZ(FlatMatrix const& mat) {
+  SparseZMatrix sparse;
+  sparse.rows_ = mat.rows();
+  sparse.cols_ = mat.cols();
+  sparse.row_ptr_.resize(sparse.rows_ + 1, 0);
+  
+  // First pass: count non-zeros per row
+  for (int64_t i = 0; i < sparse.rows_; ++i) {
+    for (int64_t j = 0; j < sparse.cols_; ++j) {
+      if (mat(i, j) != FrZero()) {
+        sparse.row_ptr_[i + 1]++;
+      }
+    }
+  }
+  
+  // Cumulative sum to get row pointers
+  for (int64_t i = 0; i < sparse.rows_; ++i) {
+    sparse.row_ptr_[i + 1] += sparse.row_ptr_[i];
+  }
+  
+  // Allocate space
+  int64_t total_nnz = sparse.row_ptr_[sparse.rows_];
+  sparse.col_idx_.resize(total_nnz);
+  sparse.values_.resize(total_nnz);
+  
+  // Second pass: fill values
+  std::vector<int64_t> current_pos = sparse.row_ptr_;
+  for (int64_t i = 0; i < sparse.rows_; ++i) {
+    for (int64_t j = 0; j < sparse.cols_; ++j) {
+      Fr const& val = mat(i, j);
+      if (val != FrZero()) {
+        int64_t pos = current_pos[i]++;
+        sparse.col_idx_[pos] = j;
+        sparse.values_[pos] = val;
+      }
+    }
+  }
+  
+  return sparse;
+}
+
+// SparseZMatrix * vector: result[i] = sum_j sparse_z(i,j) * vec[j]
+// This computes Z * vec (standard matrix-vector multiply)
+// vec must have size == cols, result has size == rows
+inline void SparseZMatrixVectorMulRight(
+    SparseZMatrix const& sparse_z,
+    std::vector<Fr> const& vec,
+    std::vector<Fr>& result) {
+  int64_t rows = sparse_z.rows();
+  result.assign(rows, FrZero());
+  
+  auto compute_row = [&](int64_t i) {
+    Fr sum = FrZero();
+    for (int64_t k = sparse_z.row_ptr_[i]; k < sparse_z.row_ptr_[i + 1]; ++k) {
+      sum += sparse_z.values_[k] * vec[sparse_z.col_idx_[k]];
+    }
+    result[i] = sum;
+  };
+  parallel::For(rows, compute_row);
+}
+
+// vector^T * SparseZMatrix: result[j] = sum_i vec[i] * sparse_z(i,j)
+// This computes vec^T * Z (left-multiply by row vector)
+// vec must have size == rows, result has size == cols
+inline void SparseZMatrixVectorMulLeft(
+    std::vector<Fr> const& vec,
+    SparseZMatrix const& sparse_z,
+    std::vector<Fr>& result) {
+  int64_t cols = sparse_z.cols();
+  result.assign(cols, FrZero());
+  
+  for (int64_t i = 0; i < sparse_z.rows(); ++i) {
+    Fr const& vi = vec[i];
+    for (int64_t k = sparse_z.row_ptr_[i]; k < sparse_z.row_ptr_[i + 1]; ++k) {
+      result[sparse_z.col_idx_[k]] += vi * sparse_z.values_[k];
+    }
+  }
+}
+
+// SparseMatrix * SparseZMatrix multiplication
+// sparse_a is m x n_vars (CSR), sparse_z is n_vars x n (CSR)
+// result is m x n: result[i][j] = sum_k sparse_a(i,k) * sparse_z(k,j)
+inline void SparseMatrixMulSparseZ(
+    SparseMatrix const& sparse_a,
+    SparseZMatrix const& sparse_z,
+    std::vector<std::vector<Fr>>& result) {
+  int64_t m = sparse_a.rows();
+  int64_t n = sparse_z.cols();
+  result.resize(m, std::vector<Fr>(n, FrZero()));
+  
+  // For each row i of sparse_a
+  auto compute_row = [&](int64_t i) {
+    std::fill(result[i].begin(), result[i].end(), FrZero());
+    // For each non-zero element (i, k) in sparse_a
+    for (int64_t k_a = sparse_a.row_ptr_[i]; k_a < sparse_a.row_ptr_[i + 1]; ++k_a) {
+      int64_t k = sparse_a.col_idx_[k_a];
+      Fr const& a_val = sparse_a.values_[k_a];
+      // For each non-zero element (k, j) in sparse_z
+      for (int64_t k_z = sparse_z.row_ptr_[k]; k_z < sparse_z.row_ptr_[k + 1]; ++k_z) {
+        int64_t j = sparse_z.col_idx_[k_z];
+        result[i][j] += a_val * sparse_z.values_[k_z];
+      }
+    }
+  };
+  parallel::For(m, compute_row);
+}
+
+// Extract column j from SparseZMatrix
+inline std::vector<Fr> SparseZMatrixCol(SparseZMatrix const& sparse_z, int64_t j) {
+  std::vector<Fr> col(sparse_z.rows(), FrZero());
+  for (int64_t i = 0; i < sparse_z.rows(); ++i) {
+    for (int64_t k = sparse_z.row_ptr_[i]; k < sparse_z.row_ptr_[i + 1]; ++k) {
+      if (sparse_z.col_idx_[k] == j) {
+        col[i] = sparse_z.values_[k];
+        break;
+      }
+    }
+  }
+  return col;
+}
+
+// Extract non-zero elements and their row indices from column j of SparseZMatrix.
+// Returns (row_indices, values) pair containing only non-zero entries.
+// This avoids allocating a dense n_vars-sized vector and the subsequent
+// zero-checking pass in MultiExpBdlo12Inner(check_01=true).
+// Parallelized by processing rows in parallel and filtering results.
+inline std::pair<std::vector<int64_t>, std::vector<Fr>>
+SparseZMatrixColNonZero(SparseZMatrix const& sparse_z, int64_t j) {
+  int64_t rows = sparse_z.rows();
+
+  // First pass: find matches in parallel, store (row, value) pairs
+  std::vector<std::pair<int64_t, Fr>> matches;
+  std::mutex matches_mutex;
+
+  auto find_in_row = [&](int64_t i) {
+    for (int64_t k = sparse_z.row_ptr_[i]; k < sparse_z.row_ptr_[i + 1]; ++k) {
+      if (sparse_z.col_idx_[k] == j) {
+        std::lock_guard<std::mutex> lock(matches_mutex);
+        matches.emplace_back(i, sparse_z.values_[k]);
+        break;
+      }
+    }
+  };
+  parallel::For(rows, find_in_row);
+
+  // Extract row_indices and values from matches
+  std::vector<int64_t> row_indices;
+  std::vector<Fr> values;
+  row_indices.reserve(matches.size());
+  values.reserve(matches.size());
+  for (auto const& p : matches) {
+    row_indices.push_back(p.first);
+    values.push_back(p.second);
+  }
+
+  return {std::move(row_indices), std::move(values)};
+}
+
+// ========================================================================
+// R1csStats: Statistics for R1CS constraint system
+// ========================================================================
+struct R1csStats {
+  int64_t num_constraints = 0;
+  int64_t num_variables = 0;
+  int64_t nnz_a = 0;
+  int64_t nnz_b = 0;
+  int64_t nnz_c = 0;
+
+  void Print() const {
+    std::cout << "R1CS Stats: constraints=" << num_constraints
+              << " variables=" << num_variables
+              << " nnz_a=" << nnz_a
+              << " nnz_b=" << nnz_b
+              << " nnz_c=" << nnz_c << "\n";
+  }
+};

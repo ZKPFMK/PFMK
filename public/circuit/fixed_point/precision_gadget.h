@@ -19,14 +19,15 @@ class PrecisionGadget : public libsnark::gadget<Fr> { //D=6, N=48, M=24
 
  public:
   PrecisionGadget(libsnark::protoboard<Fr>& pb,
-                  libsnark::pb_linear_combination<Fr> const& a,
+                  libsnark::linear_combination<Fr> const& a,
                   const std::string& annotation_prefix = "")
-      : libsnark::gadget<Fr>(pb, annotation_prefix), a_(a) {
-    a_off_.assign(this->pb, a_ + RationalConst<D, N>().kFrDN);
+      : libsnark::gadget<Fr>(pb, annotation_prefix), a_(a),
+        a_off_(a_ + RationalConst<D, N>().kFrDN) {
     // 2kFrDN > a_ + kFrDN >=0, so use D+N+1 bits
     bits_.allocate(this->pb, D + N + 1, FMT(this->annotation_prefix, " bits")); //索引小为低, 大为高位
+    a_off_pb_.assign(this->pb, a_off_);
     p1_gadget_.reset(new libsnark::packing_gadget<Fr>(
-        this->pb, bits_, a_off_, FMT(this->annotation_prefix, " p1")));
+        this->pb, bits_, a_off_pb_, FMT(this->annotation_prefix, " p1")));
 
     packed_.allocate(pb, FMT(this->annotation_prefix, " packed"));
     p2_gadget_.reset(new libsnark::packing_gadget<Fr>(
@@ -34,9 +35,8 @@ class PrecisionGadget : public libsnark::gadget<Fr> { //D=6, N=48, M=24
         libsnark::pb_variable_array<Fr>(bits_.begin() + N - M, bits_.end()),
         packed_, FMT(this->annotation_prefix, " p2")));
 
-    ret_.assign(this->pb, libsnark::linear_combination<Fr>(packed_) -
-                              RationalConst<D, M>().kFrDN); //最后的结果
-    sign_.assign(this->pb, p2_gadget_->bits[D + M]); //1代表正, 0代表负
+    ret_ = libsnark::linear_combination<Fr>(packed_) - RationalConst<D, M>().kFrDN; //最后的结果
+    sign_ = p2_gadget_->bits[D + M]; //1代表正, 0代表负
   }
 
   void generate_r1cs_constraints() {
@@ -45,34 +45,29 @@ class PrecisionGadget : public libsnark::gadget<Fr> { //D=6, N=48, M=24
   }
 
   void generate_r1cs_witness() {
-    a_.evaluate(this->pb);
-    a_off_.evaluate(this->pb);
-
-    // std::cout << "a: " << this->pb.lc_val(a_) << "\n";
-    // std::cout << "a_off: " << this->pb.lc_val(a_off_) << "\n";
+    // std::cout << "a: " << a_.evaluate(this->pb.full_variable_assignment_ref()) << "\n";
+    // std::cout << "a_off: " << a_off_.evaluate(this->pb.full_variable_assignment_ref()) << "\n";
 
     p1_gadget_->generate_r1cs_witness_from_packed();
     p2_gadget_->generate_r1cs_witness_from_bits();
-    ret_.evaluate(this->pb);
-    sign_.evaluate(this->pb);
 
 #ifdef _DEBUG
-    Fr a = this->pb.lc_val(a_);
-    Fr b = this->pb.lc_val(ret_);
-    Fr sign = this->pb.lc_val(sign_);
+    Fr a = a_.evaluate(this->pb.full_variable_assignment_ref());
+    Fr b = ret_.evaluate(this->pb.full_variable_assignment_ref());
+    Fr sign = sign_.evaluate(this->pb.full_variable_assignment_ref());
     assert(a.isNegative() == b.isNegative());
     assert(Fr(a.isNegative() ? 0 : 1) == sign);
     double da = RationalToDouble<D, N>(a);
     double db = RationalToDouble<D, M>(b);
     CHECK(std::abs(da - db) < 0.001, "");
-    auto val = ReducePrecision<D, N, M>(this->pb.lc_val(a_));
-    CHECK(val == this->pb.lc_val(ret_), "");
+    auto val = ReducePrecision<D, N, M>(a_.evaluate(this->pb.full_variable_assignment_ref()));
+    CHECK(val == ret_.evaluate(this->pb.full_variable_assignment_ref()), "");
 #endif
   }
 
-  libsnark::pb_linear_combination<Fr> ret() const { return ret_; }
+  libsnark::linear_combination<Fr> ret() const { return ret_; }
 
-  libsnark::pb_linear_combination<Fr> sign() const { return sign_; }
+  libsnark::linear_combination<Fr> sign() const { return sign_; }
 
   static bool Test(double const& dx) {
     Fr x = DoubleToRational<D, N>(dx);
@@ -88,14 +83,15 @@ class PrecisionGadget : public libsnark::gadget<Fr> { //D=6, N=48, M=24
   }
 
  private:
-  libsnark::pb_linear_combination<Fr> a_;
-  libsnark::pb_linear_combination<Fr> a_off_;
+  libsnark::linear_combination<Fr> a_;
+  libsnark::linear_combination<Fr> a_off_;
+  libsnark::pb_linear_combination<Fr> a_off_pb_;
   std::unique_ptr<libsnark::packing_gadget<Fr>> p1_gadget_;
   std::unique_ptr<libsnark::packing_gadget<Fr>> p2_gadget_;
   libsnark::pb_variable_array<Fr> bits_;
   libsnark::pb_variable<Fr> packed_;
-  libsnark::pb_linear_combination<Fr> ret_;
-  libsnark::pb_linear_combination<Fr> sign_;
+  libsnark::linear_combination<Fr> ret_;
+  libsnark::linear_combination<Fr> sign_;
 };
 
 inline bool TestPrecision() {

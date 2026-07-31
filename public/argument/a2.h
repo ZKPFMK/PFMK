@@ -1,7 +1,7 @@
 #pragma once
 
 #include "./details.h"
-
+// R_{ip}
 // recursive version of a2
 // b: public vector<Fr>, size = n
 // a: secret vector<Fr>, size = n
@@ -78,35 +78,55 @@ struct A2 {
   };
 
   static void UpdateWitness(std::vector<Fr> & a, std::vector<Fr> & b, std::vector<G1> & g, Fr const& e){
-    size_t half = misc::Pow2UB(a.size()) >> 1;
-    auto parallel_f = [&a, &b, &g, &e, &half](int64_t i){
-      size_t j = i + half;
-      if(j >= a.size()) {
-        b[i] = b[i] * e;
-        g[i] = g[i] * e ;
-      }else{
+    size_t n = a.size();
+    size_t half = misc::Pow2UB(n) >> 1;
+    if (half == n / 2 && n == half * 2) {
+      auto parallel_f = [&a, &b, &g, &e, &half](int64_t i){
+        size_t j = i + half;
         a[i] = a[i] + a[j] * e;
         b[i] = b[i] * e + b[j];
         g[i] = g[i] * e + g[j];
-      }
-    };
-    parallel::For(half, parallel_f);
+      };
+      parallel::For(half, parallel_f);
+    } else {
+      auto parallel_f = [&a, &b, &g, &e, &half, &n](int64_t i){
+        size_t j = i + half;
+        if(j >= n) {
+          b[i] = b[i] * e;
+          g[i] = g[i] * e;
+        }else{
+          a[i] = a[i] + a[j] * e;
+          b[i] = b[i] * e + b[j];
+          g[i] = g[i] * e + g[j];
+        }
+      };
+      parallel::For(half, parallel_f);
+    }
     a.resize(half);
     b.resize(half);
     g.resize(half);
   }
 
   static void UpdateStatement(std::vector<Fr> & b, Fr const& e){
-    size_t half = misc::Pow2UB(b.size()) >> 1;
-    auto parallel_f = [&b, &e, &half](int64_t i){
-      size_t j = i + half;
-      if(j >= b.size()) {
-        b[i] = b[i] * e;
-      }else{
+    size_t n = b.size();
+    size_t half = misc::Pow2UB(n) >> 1;
+    if (half == n / 2 && n == half * 2) {
+      auto parallel_f = [&b, &e, &half](int64_t i){
+        size_t j = i + half;
         b[i] = b[i] * e + b[j];
-      }
-    };
-    parallel::For(half, parallel_f);
+      };
+      parallel::For(half, parallel_f);
+    } else {
+      auto parallel_f = [&b, &e, &half, &n](int64_t i){
+        size_t j = i + half;
+        if(j >= n) {
+          b[i] = b[i] * e;
+        }else{
+          b[i] = b[i] * e + b[j];
+        }
+      };
+      parallel::For(half, parallel_f);
+    }
     b.resize(half);
   }
 
@@ -142,14 +162,15 @@ struct A2 {
     com_t2.resize(round);
 
     for (int64_t loop = 0, mid = 1 << (round-1); loop < round; ++loop, mid >>= 1) {
-      std::array<parallel::VoidTask, 2> tasks;
-      tasks[0] = [&a, &b, &h, &g, &com_t0, &mid, &loop]() {
-        Fr t0 = InnerProduct(a.data(), b.data() + mid, b.size() - mid);
-        com_t0[loop] = MultiExpBdlo12(g.data() + mid, a.data(), a.size() - mid) + h * t0;
-      };
-      tasks[1] = [&a, &b, &h, &g, &com_t2, &mid, &loop]() {
-        Fr t2 = InnerProduct(a.data() + mid, b.data(), b.size() - mid);
-        com_t2[loop] = MultiExpBdlo12(g.data(), a.data() + mid, a.size() - mid) + h * t2;
+      std::vector<std::function<void()>> tasks = {
+        [&a, &b, &g, &h, &com_t0, &loop, &mid](){
+          Fr t0 = InnerProduct(a.data(), b.data() + mid, b.size() - mid);
+          com_t0[loop] = MultiExpBdlo12(g.data() + mid, a.data(), a.size() - mid) + h * t0;
+        },
+        [&a, &b, &g, &h, &com_t2, &loop, &mid](){
+          Fr t2 = InnerProduct(a.data() + mid, b.data(), b.size() - mid);
+          com_t2[loop] = MultiExpBdlo12(g.data(), a.data() + mid, a.size() - mid) + h * t2;
+        }
       };
       parallel::Invoke(tasks);
 
@@ -174,7 +195,6 @@ struct A2 {
     auto c = input.c;
     auto h = pc::PcU();
     auto com_a = input.com_pub.com_a;
-    auto g = pc::CopyG(input.get_ga, n);
 
     auto const& a = proof.a;
     auto const& com_t0 = proof.com_t0;
@@ -190,14 +210,16 @@ struct A2 {
       UpdateSeed(seed, com_t0[loop], com_t2[loop]);
       e[loop] = H256ToFr(seed);
 
-      com_a = com_t0[loop] + com_a * e[loop] + com_t2[loop] * e[loop] * e[loop];
+      Fr e_sq = e[loop] * e[loop];
+      com_a = com_t0[loop] + com_a * e[loop] + com_t2[loop] * e_sq;
       UpdateStatement(b, e[loop]);
     }
 
     std::vector<Fr> e_hat(n, FrOne());
     misc::BuildE(e_hat, e, true);
-    G1 g_hat = MultiExpBdlo12(g, e_hat);
-    return com_a == g_hat * a + h * (a * b[0]);
+    G1 g_hat = MultiExpBdlo12<G1>(input.get_ga, e_hat, n);
+    G1 expected = g_hat * a + h * (a * b[0]);
+    return com_a == expected;
   }
 
   static bool Test(int64_t n);

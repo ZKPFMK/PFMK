@@ -11,7 +11,7 @@ class AbsGadget : public libsnark::gadget<Fr> {
 
  public:
   AbsGadget(libsnark::protoboard<Fr>& pb,
-            libsnark::pb_linear_combination<Fr> const& a,
+            libsnark::linear_combination<Fr> const& a,
             const std::string& annotation_prefix = "")
       : libsnark::gadget<Fr>(pb, annotation_prefix), a_(a) {
     ret_.allocate(pb, FMT(this->annotation_prefix, " ret"));
@@ -28,7 +28,6 @@ class AbsGadget : public libsnark::gadget<Fr> {
   }
 
   void generate_r1cs_witness() {
-    a_.evaluate(this->pb);
     Fr fr_a = this->pb.lc_val(a_);
     this->pb.val(ret_) = fr_a.isNegative() ? -fr_a : fr_a;
     sign_gadget_->generate_r1cs_witness();
@@ -37,7 +36,7 @@ class AbsGadget : public libsnark::gadget<Fr> {
   libsnark::pb_variable<Fr> ret() const { return ret_; }
 
  private:
-  libsnark::pb_linear_combination<Fr> a_;
+  libsnark::linear_combination<Fr> a_;
   std::unique_ptr<SignGadget<D, N>> sign_gadget_;
   libsnark::pb_variable<Fr> ret_;
 };
